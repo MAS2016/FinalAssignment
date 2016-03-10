@@ -26,12 +26,16 @@ globals
 ;   1) Scout-bees
 ;   2) Worker-bees
 ;   3) Queen-bees
+;   4) Sites ((un)discovered food locations)
+;   5) Sensors (sensors that allow an agent to observe the environment)
+;   6) Hives
 ;   (optional: enemy)
 breed [scouts scout]        ;I suggest we only use Bee in stead of Worker and Scout. Bee is always worker but can become (initial) scout
 breed [workers worker]
 breed [queens queen]
 breed [sites site]
-breed [sensors sensor] ; sensors that allows agents to observe environment
+breed [sensors sensor]
+breed [hives hive]
 
 sites-own [quality discovered? scouts-on-site]
 
@@ -83,10 +87,12 @@ scouts-own [
 
 ; FOR FOOD SOURCE:
 ;  11) food_value             : the amount of food that is stored in a source
+sites-own[food_value]
 
 ; FOR HIVES:
 ;  12) total_food_in_hive     : the current amount of food that a hive holds
 ;  13) total_bees_in_hive     : the current amount of bees that a hive holds
+hives-own[total_food_in_hive total_bees_in_hive]
 
 ;scouts-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
 workers-own [beliefs desires intentions age max_age energy max_energy incoming_messages carrying]
@@ -100,6 +106,7 @@ to setup
   setup-food-sources   ; determine food locations with quality
   reset-ticks
   setup-bees           ; create scouts, workers, and a queen
+  setup-hives
 ;  setup-ticks
 end
 
@@ -151,7 +158,9 @@ to setup-bees
   ask n-of (initial-percentage) scouts[set belief-initial-scout? true set bee-timer random 100] ; assigning some of the scouts to be initial scouts. bee-timer here determines how long they will wait before starting initial exploration
 end
 
+to setup-hives
 
+end
 
 
 ; --- Setup agents ---
@@ -263,6 +272,50 @@ end
 ; opnieuw is het denk ik goed om 1 actie per tick te laten uitvoeren
 ; onderstaande is te lezen als: intentie --> bijbehorende acties
 
+to execute-actions
+  execute-scout-actions
+  execute-worker-actions
+  execute-queen-actions
+end
+
+; ######################
+; #  GENERAL METHODS   #
+; ######################
+; these include:
+; 1) move
+; 2) migrate
+; 3) eat
+
+
+; ######################
+; #    SCOUT METHODS   #
+; ######################
+
+  ; SCOUTS:
+  ;     move                 --> move in random direction
+  ;     look around          --> check sensors for food
+  ;     fly to hive          --> move straight to own hive
+  ;     tell worker about location of food --> send-messages (to workers)
+  ;     tell queen about location & quality of new site --> send-messages (to queen)
+  ;     migrate              --> move straight to new site location and set own hive to this location
+
+to execute-scout-actions
+  ask scouts [
+    ifelse intention == "move" [move][
+    ifelse intention == "look around" [look-around][
+    ifelse intention == "fly to hive" [fly-to-hive][
+    ifelse intention == "tell worker about location of food" [tell-worker][
+    ifelse intention == "tell queen about location and quality of new site" [tell-queen][
+    ifelse intention == "migrate" [migrate][
+    if intention == "eat"[eat]
+    ]]]]]]
+  ]
+end
+
+; ######################
+; #   WORKER METHODS   #
+; ######################
+
   ; WORKERS (always desires to collect food):
   ;     wait for message     --> swarm around at own hive
   ;     fly to location      --> move to potential food location (look around not yet necessary)
@@ -273,13 +326,9 @@ end
   ;     eat                  --> energy + 1 & total_food_in_hive - 1
   ;     migrate              --> move straight to new site location and set own hive to this location
 
-  ; SCOUTS:
-  ;     move                 --> move in random direction
-  ;     look-around          --> check sensors for food
-  ;     fly to hive          --> move straight to own hive
-  ;     tell worker about location of food --> send-messages (to workers)
-  ;     tell queen about location & quality of new site --> send-messages (to queen)
-  ;     migrate              --> move straight to new site location and set own hive to this location
+; ######################
+; #    QUEEN METHODS   #
+; ######################
 
   ; QUEEN(S):
   ;     produce new worker-bee --> hatch 1 worker with characteristics (age, energy, own hive, etc.) at location
@@ -374,10 +423,10 @@ NIL
 1
 
 SLIDER
-17
-71
-189
-104
+9
+49
+181
+82
 initial-percentage
 initial-percentage
 5
