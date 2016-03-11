@@ -37,8 +37,31 @@ breed [sites site]
 breed [hives hive]
 breed [sensors sensor]
 
-sites-own [quality discovered? scouts-on-site]
+; --- Local variables ---
+; The following local variables exist:
+; FOR BEES:
+;   1) beliefs                : the agent's current belief base
+;   2) desires                : the agent's current desire
+;   3) intentions             : the agent's current intention
+;   4) carrying               : the amount of food a worker bee is carrying
+;   5) age                    : the current age of a bee
+;   6) max_age                : maximum age of a bee (i.e. at which it dies) (normal distribution)
+;   7) energy                 : the current amount of energy that a bee has
+;   8) max_energy             : maximum energy of a bee (normal distribution)
+;   9) outgoing_messages      : the current outgoing message (coming from a scout or queen)
+;  10) incoming_messages      : the current incoming message
 
+; FOR FOOD SOURCE:
+;  11) food_value             : the amount of food that is stored in a source
+
+; FOR HIVES:
+;  12) total_food_in_hive     : the current amount of food that a hive holds
+;  13) total_bees_in_hive     : the current amount of bees that a hive holds
+
+; ###################
+; #   SCOUT AGENT   #
+; ###################
+;scouts-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
 scouts-own [
   desire                    ; survive
   age
@@ -47,7 +70,10 @@ scouts-own [
   max_energy
   incoming_messages
   outgoing_messages
-  my-home                   ; a bee's original position
+  my_home                   ; a bee's original position
+
+  belief_sites              ; Lists of patches suitable for a new hive, with quality
+  belief_food               ; List of food patches with a quality
 
 ; next-task                 ; the code block a bee is running
   intention                 ; comparable to "next-task" in BeeSmart: watch-dance, pipe, discover, revisit, go-home, inspect-food-source, dance, take-off, collect-food
@@ -70,32 +96,26 @@ scouts-own [
 ;  temp-y-dance
 ]
 
+; ###################
+; #   WORKER AGENT  #
+; ###################
 
-; --- Local variables ---
-; The following local variables exist:
-; FOR BEES:
-;   1) beliefs                : the agent's current belief base
-;   2) desires                : the agent's current desire
-;   3) intentions             : the agent's current intention
-;   4) carrying               : the amount of food a worker bee is carrying
-;   5) age                    : the current age of a bee
-;   6) max_age                : maximum age of a bee (i.e. at which it dies) (normal distribution)
-;   7) energy                 : the current amount of energy that a bee has
-;   8) max_energy             : maximum energy of a bee (normal distribution)
-;   9) outgoing_messages      : the current outgoing message (coming from a scout or queen)
-;  10) incoming_messages      : the current incoming message
+workers-own [beliefs desires intentions age max_age energy max_energy incoming_messages carrying]
 
-; FOR FOOD SOURCE:
-;  11) food_value             : the amount of food that is stored in a source
+; ###################
+; #    QUEEN AGENT  #
+; ###################
 
-; FOR HIVES:
-;  12) total_food_in_hive     : the current amount of food that a hive holds
-;  13) total_bees_in_hive     : the current amount of bees that a hive holds
+queens-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
+
+; ###################
+; #    HIVE AGENT   #
+; ###################
+
 hives-own[total_food_in_hive total_bees_in_hive]
 
-;scouts-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
-workers-own [beliefs desires intentions age max_age energy max_energy incoming_messages carrying]
-queens-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
+
+
 
 ;--------------------------------------------------------------------------------------------------
 
@@ -336,6 +356,7 @@ end
   ;     tell others to migrate --> send-messages (to some workers and scouts)
   ;     migrate to new site    --> move straight to new site location and set own hive to this location
   ;     create new hive        --> create hive at own hive location and set total food & bees in this hive
+  ;     eat                    --> energy + 1 & total_food_in_hive - 1
 
 
 ; --- Send messages ---
