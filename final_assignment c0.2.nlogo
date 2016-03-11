@@ -10,13 +10,6 @@
 
 globals
   [initial_bees
-   scout_worker_ratio
-   number_of_food_sources
-   nectar_refill_rate
-   bee_capacity
-   energy_loss_rate          ; how much energy the bee loses per tick
-   gain_from_food            ; how much energy the bee gains from eating 1 food
-   carrying_capacity         ; how much food the bee can carry
    color-list                ; colors for food sources, which keeps consistency among the hive colors, plot pens colors, and committed bees' colors
    quality-list              ; quality of food sources
    ]
@@ -134,7 +127,7 @@ end
 to setup-food-sources
   set color-list [97.9 94.5 57.5 63.8 17.6 14.9 27.5 25.1 117.9 114.4] ; food sources have different colors for clarity
   set quality-list [100 75 50 1 54 48 40 32 24 16]                     ; food sources have different quality = food value
-  ask n-of num-food-sources patches with [distancexy 0 0 > 16 and abs pxcor < (max-pxcor - 2) and abs pycor < (max-pycor - 2)][ ;randomly placing food sources around the center in the view with a minimum distance of 16 from the center
+  ask n-of number_of_food_sources patches with [distancexy 0 0 > 16 and abs pxcor < (max-pxcor - 2) and abs pycor < (max-pycor - 2)][ ;randomly placing food sources around the center in the view with a minimum distance of 16 from the center
     sprout-sites 1 [set shape "flower" set size 2 set color gray set discovered? false] ; initial food source has not yet been discovered (gray)
   ]
   let i 0   ;assign quality and plot pens to each hive
@@ -237,6 +230,10 @@ end
   ;     location of new site to migrate to : based on received message from queen
   ;     current energy level
 
+; update food source list
+to update_food_sources
+  ; voeg nieuw element bestaande uit ['patch', 'kleur'] aan lijst toe
+end
 
   ; QUEEN(S):
   ;     number of workers
@@ -386,7 +383,6 @@ end
   ;     create new hive        --> create hive at own hive location and set total food & bees in this hive
   ;     eat                    --> energy + 1 & total_food_in_hive - 1
 
-
 ; --- Send messages ---
 ;to send messages
   ; scout -> worker          : set outgoing_messages to location of food and set incoming messages of SOME worker bees to this location.
@@ -395,10 +391,10 @@ end
 ;end
 @#$#@#$#@
 GRAPHICS-WINDOW
-193
-10
-918
-580
+221
+12
+946
+582
 32
 24
 11.0
@@ -424,12 +420,12 @@ ticks
 SLIDER
 9
 11
-181
+214
 44
-num-food-sources
-num-food-sources
+number_of_food_sources
+number_of_food_sources
 1
-10
+100
 7
 1
 1
@@ -437,10 +433,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-44
-202
-111
-235
+21
+229
+88
+262
 SETUP
 setup
 NIL
@@ -454,10 +450,10 @@ NIL
 1
 
 BUTTON
-46
-248
-109
-281
+23
+275
+86
+308
 GO
 go
 T
@@ -471,19 +467,99 @@ NIL
 1
 
 SLIDER
-9
-49
-181
-82
-initial-percentage
-initial-percentage
-5
-25
-13
+10
+157
+182
+190
+gain_from_food
+gain_from_food
+0
+10
+10
 1
 1
 NIL
 HORIZONTAL
+
+SLIDER
+9
+77
+182
+110
+scout_worker_ratio
+scout_worker_ratio
+0
+2
+1
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+9
+124
+181
+157
+carrying_capacity
+carrying_capacity
+0
+20
+5
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+9
+44
+181
+77
+nectar_refill_rate
+nectar_refill_rate
+0
+100
+50
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+10
+190
+182
+223
+energy_loss_rate
+energy_loss_rate
+0
+100
+50
+1
+1
+NIL
+HORIZONTAL
+
+PLOT
+950
+12
+1150
+162
+Number of bees
+Ticks
+Number
+0.0
+10.0
+0.0
+10.0
+true
+false
+"" ""
+PENS
+"Queens" 1.0 0 -2674135 true "" "plot count queens"
+"Workers" 1.0 0 -1184463 true "" "plot count workers"
+"Scouts" 1.0 0 -7500403 true "" "plot count scouts"
 
 @#$#@#$#@
 ## WHAT IS IT?
