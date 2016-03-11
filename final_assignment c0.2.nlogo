@@ -14,8 +14,9 @@ globals
    number_of_food_sources
    nectar_refill_rate
    bee_capacity
-   energy_loss_rate
-   carrying_capacity
+   energy_loss_rate          ; how much energy the bee loses per tick
+   gain_from_food            ; how much energy the bee gains from eating 1 food
+   carrying_capacity         ; how much food the bee can carry
    color-list                ; colors for food sources, which keeps consistency among the hive colors, plot pens colors, and committed bees' colors
    quality-list              ; quality of food sources
    ]
@@ -62,27 +63,22 @@ breed [sensors sensor]
 ; #   SCOUT AGENT   #
 ; ###################
 ;scouts-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
-scouts-own [
-  desire                    ; survive
-  age
-  max_age
-  energy
-  max_energy
-  incoming_messages
-  outgoing_messages
-  my_home                   ; a bee's original position
 
-  belief_sites              ; Lists of patches suitable for a new hive, with quality
+scouts-own [
+  desire                    ; survive (if eating is necessary),
+  age                       ; the bee's current age
+  max_age                   ; the maximum age a bee will reach
+  energy                    ; how much energy the bee has. Each tick, it will burn energy
+  max_energy                ; how much energy a bee can have
+  incoming_messages         ; the bee's incoming messages
+  outgoing_messages         ; the bee's outgoing messages
+  sent_messages             ; the bee's sent messages
+  my_home                   ; a bee's original position or hive
+  belief_sites              ; Lists of patches suitable for a new hive, with this bee's belief about quality
   belief_food               ; List of food patches with a quality
 
-; next-task                 ; the code block a bee is running
-  intention                 ; comparable to "next-task" in BeeSmart: watch-dance, pipe, discover, revisit, go-home, inspect-food-source, dance, take-off, collect-food
 
-  task-string               ; the behavior a bee is displaying
-  bee-timer                 ; a timer keeping track of the length of the current state or the waiting time before entering next state
-  target                    ; the hive that a bee is currently focusing on exploring
-  interest                  ; a bee's interest in the target hive
-  trips                     ; times a bee has visited the target
+  intention                 ; comparable to "next-task" in BeeSmart: watch-dance, pipe, discover, revisit, go-home, inspect-food-source, dance, take-off, collect-food
 
   belief-initial-scout?     ; true if bee beliefs to be an initial scout who explores unknown food sources
   belief-no-discovery?      ; true if it is an initial scout and fails to discover any food source on its initial exploration
@@ -90,10 +86,7 @@ scouts-own [
   belief-piping?            ; a bee starts to "pipe" when the decision of the best hive is made. true if a bee observes more bees on a certain hive site than the quorum or when it observes other bees piping
 
 ; dance related variables
-;  dist-to-hive              ; the distance between the swarm and the hive that a bee is exploring
   belief-circle-switch       ; when making a waggle dance, a bee alternates left and right to make the figure "8". circle-switch alternates between 1 and -1 to tell a bee which direction to turn.
-;  temp-x-dance              ; initial position of a dance
-;  temp-y-dance
 ]
 
 ; ###################
@@ -304,7 +297,32 @@ end
 ; 1) move
 ; 2) migrate
 ; 3) eat
+; 4) use energy
 
+; 1) move
+to move
+  forward 1
+end
+
+; 2) migrate
+to migrate
+;  set target to newest message from queen
+end
+
+; 3) eat
+; increase own energy by 1
+; decrease food in hive
+to eat
+  set energy energy + gain_from_food
+  ask my_home[
+    set total_food_in_hive total_food_in_hive - 1
+  ]
+end
+
+; 4) use energy
+to use-energy
+  set energy energy - energy_loss_rate
+end
 
 ; ######################
 ; #    SCOUT METHODS   #
@@ -317,6 +335,7 @@ end
   ;     tell worker about location of food --> send-messages (to workers)
   ;     tell queen about location & quality of new site --> send-messages (to queen)
   ;     migrate              --> move straight to new site location and set own hive to this location
+  ;     eat                  --> energy + 1 & total_food_in_hive - 1
 
 to execute-scout-actions
   ask scouts [
@@ -328,7 +347,16 @@ to execute-scout-actions
     ifelse intention == "migrate" [migrate][
     if intention == "eat"[eat]
     ]]]]]]
+
   ]
+end
+
+to calculate-quality
+; If on a new patch, the quality of this patch is assessed.
+; This is done by checking the list of known patches with food.
+; Determine the 'total gain' - i.e. the sum of: (total food in patch) / (carrying capacity - energy cost to reach food)
+; energy cost to reach food = (distance to patch) * 2 (to and from) * energy_loss_rate
+; save the quality of the site
 end
 
 ; ######################
