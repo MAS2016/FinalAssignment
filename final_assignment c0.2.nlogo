@@ -26,16 +26,16 @@ globals
 ;   1) Scout-bees
 ;   2) Worker-bees
 ;   3) Queen-bees
-;   4) Sites ((un)discovered food locations)
-;   5) Sensors (sensors that allow an agent to observe the environment)
-;   6) Hives
+;   4) Sites (possible hive locations)
+;   5) Hives
+;   6) Sensors (sensors that allow an agent to observe the environment)
 ;   (optional: enemy)
 breed [scouts scout]        ;I suggest we only use Bee in stead of Worker and Scout. Bee is always worker but can become (initial) scout
-breed [workers worker]
+breed [workers worker]      ;Tjeerd en ik denken dat het ook correct is om het zo op te delen, aangezien het een best duidelijk afgebakende 'rol' is. Het bereiken van een specifieke agenset zonder 'ifs' erin is ook een voordeel. De paar methods die overeenkomen nemen we dan voor lief.
 breed [queens queen]
 breed [sites site]
-breed [sensors sensor]
 breed [hives hive]
+breed [sensors sensor]
 
 sites-own [quality discovered? scouts-on-site]
 
@@ -87,7 +87,6 @@ scouts-own [
 
 ; FOR FOOD SOURCE:
 ;  11) food_value             : the amount of food that is stored in a source
-sites-own[food_value]
 
 ; FOR HIVES:
 ;  12) total_food_in_hive     : the current amount of food that a hive holds
@@ -138,7 +137,7 @@ to setup-food-sources
   ]
 end
 
-
+; herschrijven om aparte scouts en workers te hebben
 to setup-bees
   create-scouts 100 [
     fd random-float 4                  ;let bees spread out from the center
