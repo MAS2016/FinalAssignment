@@ -399,6 +399,15 @@ end
   ;     eat                  --> energy + 1 & total_food_in_hive - 1
   ;     migrate              --> move straight to new site location and set own hive to this location
 
+to execute-worker-actions
+  ifelse intention == "wait for message" [wait-for-message][
+  ifelse intention == "collect food" [collect-food][
+  ifelse intention == "drop food in hive" [drop-food-in-hive][
+  ifelse intention == "" [][
+  ifelse intention == "" [][
+  ]]]]]
+end
+
 to wait-for-message
   ;fly around in a circle
 end
@@ -427,10 +436,20 @@ end
   ;     produce new worker-bee --> hatch 1 worker with characteristics (age, energy, own hive, etc.) at location
   ;     produce new scout-bee  --> hatch 1 scout with characteristics at location
   ;     produce new queen      --> hatch 1 queen with characteristics
-  ;     tell others to migrate --> send-messages (to some workers and scouts)
+  ;     tell others to migrate --> send-messages (to some workers and scouts) - THIS SHOULD BE DONE BY THE NEW QUEEN
   ;     migrate to new site    --> move straight to new site location and set own hive to this location
   ;     create new hive        --> create hive at own hive location and set total food & bees in this hive
   ;     eat                    --> energy + 1 & total_food_in_hive - 1
+
+to execute-queen-actions
+  ifelse intention == "produce new worker bee"[produce-new-worker-bee][
+  ifelse intention == "produce new scout bee"[produce-new-scout-bee][
+  ifelse intention == "produce new queen"[produce-new-queen][
+  ifelse intention == "tell others to migrate"[][
+  ifelse intention == "migrate to new site"[migrate][
+  ifelse intention == "create new hive"[create-new-hive][
+  ]]]]]]
+end
 
 to produce-new-worker-bee
   let parent_home my_home
@@ -473,6 +492,9 @@ to produce-new-queen
     ; convert number of workers and scout homes with parent home to child home
     ; do that somewhere here
   ]
+end
+
+to create-new-hive
 end
 
 ; --- Send messages ---
