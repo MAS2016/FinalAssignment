@@ -379,6 +379,12 @@ to calculate-quality
 ; save the quality of the site
 end
 
+to tell-worker
+end
+
+to tell-queen
+end
+
 ; ######################
 ; #   WORKER METHODS   #
 ; ######################
