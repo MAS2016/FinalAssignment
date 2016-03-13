@@ -1,5 +1,5 @@
 ; --- Global variables ---
-; The following global variables exist:
+; The following global variables exist, all of which are defined in the interface:
 ;   1) initial_bees           : the intitial number of bees
 ;   2) scout_worker_ratio     : the desired ratio between scout-bees and worker-bees
 ;   3) number_of_food_sources : the number of food sources in the environment (fixed)
@@ -9,10 +9,7 @@
 ;   7) carrying_capacity      : the maximum amount of food a worker bee can carry
 
 globals
-  [initial_bees
-   color-list                ; colors for food sources, which keeps consistency among the hive colors, plot pens colors, and committed bees' colors
-   quality-list              ; quality of food sources
-   ]
+  [color-list]
 
 ; --- Agents ---
 ; The following types of agents exist:
@@ -43,7 +40,7 @@ breed [sensors sensor]
 ;   9) outgoing_messages      : the current outgoing message (coming from a scout or queen)
 ;  10) incoming_messages      : the current incoming message
 
-; FOR FOOD SOURCE:
+; FOR FOOD SOURCE (patches):
 ;  11) food_value             : the amount of food that is stored in a source
 
 ; FOR HIVES:
@@ -53,26 +50,18 @@ breed [sensors sensor]
 ; ###################
 ; #   SCOUT AGENT   #
 ; ###################
-;scouts-own [beliefs desires intentions age max_age energy max_energy incoming_messages outgoing_messages]
 
 scouts-own [
-  desire                    ; survive (if eating is necessary),
-  age                       ; the bee's current age
-  max_age                   ; the maximum age a bee will reach
-  energy                    ; how much energy the bee has. Each tick, it will burn energy
-  max_energy                ; how much energy a bee can have
-  incoming_messages         ; the bee's incoming messages
-  outgoing_messages         ; the bee's outgoing messages
-  sent_messages             ; the bee's sent messages
-  my_home                   ; a bee's original position or hive
-  belief_sites              ; Lists of patches suitable for a new hive, with this bee's belief about quality
-  belief_food               ; List of food patches with a quality
-
-
-  intention                 ; comparable to "next-task" in BeeSmart: discover, revisit, go-home, inspect-food-source, dance, take-off, collect-food
-
-;  belief-on-site?           ; true if it's inspecting a food source
-
+  beliefs
+  desire
+  intention
+  age
+  max_age
+  energy
+  max_energy
+  incoming_messages
+  outgoing_messages
+  my_home
 ]
 
 ; ###################
@@ -81,8 +70,8 @@ scouts-own [
 
 workers-own [
   beliefs
-  desires
-  intentions
+  desire
+  intention
   age
   max_age
   energy
@@ -98,8 +87,8 @@ workers-own [
 
 queens-own [
   beliefs
-  desires
-  intentions
+  desire
+  intention
   age
   max_age
   energy
@@ -115,49 +104,65 @@ queens-own [
 
 hives-own[total_food_in_hive total_bees_in_hive]
 
-
-
-
+patches-own [food_value]
 ;--------------------------------------------------------------------------------------------------
 
 ; --- Setup ---
 to setup
   clear-all
-  setup-food-sources   ; determine food locations with quality
   reset-ticks
-  setup-agents          ; create scouts, workers, and a queen
-  setup-hives
-;  setup-ticks
+  setup-food-sources   ; determine food locations with quality
+  setup-hive           ; create a hive at a random location
+  setup-queen
+  setup-workers
+  setup-scouts
+;  setup-agents         ; create scouts, workers, and a queen
+
 end
 
 
-; --- Setup patches ---
-;to setup-patches
-  ; create a number of food sources on a random location
-  ; set food value of each source & its nectar_refill_rate (can be done with 'plabel')
-  ; create one hive on a random location, with a bee_capacity
-;end
-
-
+; --- Setup food-sources ---
 to setup-food-sources
-  ; plabel indicates current value of food sources
-  set color-list [97.9 94.5 57.5 63.8 17.6 14.9 27.5 25.1 117.9 114.4] ; food sources have different colors for clarity
-  set quality-list [100 75 50 1 54 48 40 32 24 16]                     ; food sources have different quality = food value
-  ask n-of number_of_food_sources patches with [distancexy 0 0 > 16 and abs pxcor < (max-pxcor - 2) and abs pycor < (max-pycor - 2)][ ;randomly placing food sources around the center in the view with a minimum distance of 16 from the center
-    sprout-sites 1 [set shape "flower" set size 2 set color gray set discovered? false] ; initial food source has not yet been discovered (gray)
-  ]
-  let i 0   ;assign quality and plot pens to each hive
-  repeat count sites [
-    ask site i [set quality item i quality-list set label quality]
-;    set-current-plot "on-site"
-;    create-temporary-plot-pen word "site" i
-;    set-plot-pen-color item i color-list
-;    set-current-plot "committed"
-;    create-temporary-plot-pen word "target" i
-;    set-plot-pen-color item i color-list
-    set i i + 1
-  ]
+  ask patches [set pcolor white]
+    ask n-of number_of_food_sources patches [  ; ask random patches to become food
+      set food_value random-normal 30 20       ; set food value according to a normal distribution
+      set-color                                ; set color according to food value
+      set plabel food_value
+      set plabel-color white
+    ]
 end
+
+to set-color
+  set color-list [129 129 128.5 128 127.5 127 126.5 126 125 124 123 122]
+  ifelse food_value < 10 [set pcolor item 0 color-list][
+  ifelse food_value < 15 [set pcolor item 1 color-list][
+  ifelse food_value < 20 [set pcolor item 2 color-list][
+  ifelse food_value < 25 [set pcolor item 3 color-list][
+  ifelse food_value < 30 [set pcolor item 4 color-list][
+  ifelse food_value < 35 [set pcolor item 5 color-list][
+  ifelse food_value < 40 [set pcolor item 6 color-list][
+  ifelse food_value < 45 [set pcolor item 7 color-list][
+  ifelse food_value < 50 [set pcolor item 8 color-list][
+  ifelse food_value < 55 [set pcolor item 9 color-list][
+  ifelse food_value < 60 [set pcolor item 10 color-list][
+  if food_value >= 60 [set pcolor item 11 color-list]
+  ]]]]]]]]]]]
+end
+
+
+; --- Setup hive ---
+to setup-hive
+    create-hives 1 [
+      setxy (random max-pxcor) (random min-pycor)
+      set shape "tree"
+      set color yellow
+      set size 3
+      set total_food_in_hive 0
+      set label total_food_in_hive set label-color black
+      set total_bees_in_hive initial_bees
+    ]
+end
+
 
 ; --- Setup agents ---
 to setup-agents
@@ -171,28 +176,55 @@ to setup-agents
   ; bees have global energy_loss_rate & carrying_capacity
 end
 
+to setup-queen
+  create-queens 1 [
+    move-to [patch-here] of hive 0
+    set shape "bee 2"
+    set size 2
+    set color red
+    set my_home [patch-here] of hive 0
+    set age 0
+
+    ; Values below are arbitrarily chosen for now
+    set max_age random-normal 50 10
+    set energy 100
+    set max_energy random-normal 70 30
+  ]
+end
+
+to setup-workers
+  create-workers round (initial_bees / (scout_worker_ratio + 1)) [
+    move-to [patch-here] of hive 0
+    fd random-float 4
+    set shape "bee"
+    set color black
+    set my_home [patch-here] of hive 0
+    set age 0
+
+    ; Values below are arbitrarily chosen for now
+    set max_age random-normal 50 10
+    set energy 100
+    set max_energy random-normal 70 30
+  ]
+end
+
 ; herschrijven om aparte scouts en workers te hebben
 to setup-scouts
-  create-scouts 100 [
-    fd random-float 4                  ;let bees spread out from the center
-    set my-home patch-here
+  create-scouts round (scout_worker_ratio * (initial_bees / (scout_worker_ratio + 1))) [
+    move-to [patch-here] of hive 0
+    fd random-float 4
     set shape "bee"
-    set color gray
-    set desire "survive"
-    set belief-circle-switch 1
-    set belief-on-site? false
-    ]
-  ask n-of (initial-percentage) scouts[set bee-timer random 100] ; bee-timer here determines how long they will wait before starting initial exploration
+    set color blue
+    set my_home [patch-here] of hive 0
+    set age 0
+
+    ; Values below are arbitrarily chosen for now
+    set max_age random-normal 50 10
+    set energy 100
+    set max_energy random-normal 70 30
+  ]
 end
 
-to setup-hives
-
-end
-
-; --- Setup ticks ---
-to setup-ticks
-  reset-ticks
-end
 
 ;-------------------------------------------------------------------------------------------------
 
@@ -304,9 +336,10 @@ end
 ; ######################
 ; these include:
 ; 1) move
-; 2) migrate
-; 3) eat
-; 4) use energy
+; 2) look around
+; 3) migrate
+; 4) eat
+; 5) use energy
 
 ; 1) move
 to move
@@ -314,12 +347,17 @@ to move
   forward 1
 end
 
-; 2) migrate
+; 2) look around
+to look-around
+
+end
+
+; 3) migrate
 to migrate
 ;  set target to newest message from queen
 end
 
-; 3) eat
+; 4) eat
 ; increase own energy by 1
 ; decrease food in hive
 to eat
@@ -329,7 +367,7 @@ to eat
   ]
 end
 
-; 4) use energy
+; 5) use energy
 to use-energy
   set energy energy - energy_loss_rate
 end
@@ -349,16 +387,20 @@ end
 
 to execute-scout-actions
   ask scouts [
-    ifelse intention == "move" [move][
-    ifelse intention == "look around" [look-around][
-    ifelse intention == "fly to hive" [fly-to-hive][
-    ifelse intention == "tell worker about location of food" [tell-worker][
-    ifelse intention == "tell queen about location and quality of new site" [tell-queen][
-    ifelse intention == "migrate" [migrate][
-    if intention == "eat"[eat]
+    ifelse intention = "move" [move][
+    ifelse intention = "look around" [look-around][
+    ifelse intention = "fly to hive" [fly-to-hive][
+    ifelse intention = "tell worker about location of food" [tell-worker][
+    ifelse intention = "tell queen about location and quality of new site" [tell-queen][
+    ifelse intention = "migrate" [migrate][
+    if intention = "eat"[eat]
     ]]]]]]
 
   ]
+end
+
+to fly-to-hive
+
 end
 
 to calculate-quality
@@ -390,11 +432,11 @@ end
   ;     migrate              --> move straight to new site location and set own hive to this location
 
 to execute-worker-actions
-  ifelse intention == "wait for message" [wait-for-message][
-  ifelse intention == "collect food" [collect-food][
-  ifelse intention == "drop food in hive" [drop-food-in-hive][
-  ifelse intention == "" [][
-  ifelse intention == "" [][
+  ifelse intention = "wait for message" [wait-for-message][
+  ifelse intention = "collect food" [collect-food][
+  ifelse intention = "drop food in hive" [drop-food-in-hive][
+  ifelse intention = "" [][
+  ifelse intention = "" [][
   ]]]]]
 end
 
@@ -432,18 +474,18 @@ end
   ;     eat                    --> energy + 1 & total_food_in_hive - 1
 
 to execute-queen-actions
-  ifelse intention == "produce new worker bee"[produce-new-worker-bee][
-  ifelse intention == "produce new scout bee"[produce-new-scout-bee][
-  ifelse intention == "produce new queen"[produce-new-queen][
-  ifelse intention == "tell others to migrate"[][
-  ifelse intention == "migrate to new site"[migrate][
-  ifelse intention == "create new hive"[create-new-hive][
+  ifelse intention = "produce new worker bee"[produce-new-worker-bee][
+  ifelse intention = "produce new scout bee"[produce-new-scout-bee][
+  ifelse intention = "produce new queen"[produce-new-queen][
+  ifelse intention = "tell others to migrate"[][
+  ifelse intention = "migrate to new site"[migrate][
+  ifelse intention = "create new hive"[create-new-hive][
   ]]]]]]
 end
 
 to produce-new-worker-bee
   let parent_home my_home
-  hatch-worker 1 [
+  hatch-workers 1 [
     set my_home parent_home
     set age 0
 
@@ -456,28 +498,27 @@ end
 
 to produce-new-scout-bee
   let parent_home my_home
-  hatch-scout 1 [
+  hatch-scouts 1 [
     set my_home parent_home
     set age 0
 
     ; Values below are arbitrarily chosen for now
     set max_age random 100
     set energy 100
-    set max_enery 100
+    set max_energy 100
   ]
 end
 
 to produce-new-queen
   let parent_home my_home
-  let child_home first sent_message[0] ; ervan uitgaande dat een message bestaat uit een patch en afzender
-  hatch-queen 1 [
-    set
+  ;let child_home first sent_messages[0] ; ervan uitgaande dat een message bestaat uit een patch en afzender
+  hatch-queens 1 [
     set age 0
 
     ; Values below are arbitrarily chosen for now
     set max_age random 100
     set energy 100
-    set max_enery 100
+    set max_energy 100
 
     ; convert number of workers and scout homes with parent home to child home
     ; do that somewhere here
@@ -523,25 +564,25 @@ ticks
 120.0
 
 SLIDER
-9
-11
-214
-44
+6
+58
+211
+91
 number_of_food_sources
 number_of_food_sources
 1
 100
-7
+17
 1
 1
 NIL
 HORIZONTAL
 
 BUTTON
-21
-229
-88
-262
+18
+276
+85
+309
 SETUP
 setup
 NIL
@@ -555,10 +596,10 @@ NIL
 1
 
 BUTTON
-23
-275
-86
-308
+20
+322
+83
+355
 GO
 go
 T
@@ -572,10 +613,10 @@ NIL
 1
 
 SLIDER
-10
-157
-182
-190
+7
+204
+179
+237
 gain_from_food
 gain_from_food
 0
@@ -587,25 +628,25 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-77
-182
-110
+6
+124
+179
+157
 scout_worker_ratio
 scout_worker_ratio
-0
+0.05
 2
-1
+0.05
 0.05
 1
 NIL
 HORIZONTAL
 
 SLIDER
-9
-124
-181
-157
+6
+171
+178
+204
 carrying_capacity
 carrying_capacity
 0
@@ -617,10 +658,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-9
-44
-181
-77
+6
+91
+178
+124
 nectar_refill_rate
 nectar_refill_rate
 0
@@ -632,10 +673,10 @@ NIL
 HORIZONTAL
 
 SLIDER
-10
-190
-182
-223
+7
+237
+179
+270
 energy_loss_rate
 energy_loss_rate
 0
@@ -665,6 +706,21 @@ PENS
 "Queens" 1.0 0 -2674135 true "" "plot count queens"
 "Workers" 1.0 0 -1184463 true "" "plot count workers"
 "Scouts" 1.0 0 -7500403 true "" "plot count scouts"
+
+SLIDER
+7
+11
+179
+44
+initial_bees
+initial_bees
+0
+100
+100
+1
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -717,6 +773,52 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+bee
+true
+0
+Polygon -1184463 true false 152 149 77 163 67 195 67 211 74 234 85 252 100 264 116 276 134 286 151 300 167 285 182 278 206 260 220 242 226 218 226 195 222 166
+Polygon -16777216 true false 150 149 128 151 114 151 98 145 80 122 80 103 81 83 95 67 117 58 141 54 151 53 177 55 195 66 207 82 211 94 211 116 204 139 189 149 171 152
+Polygon -7500403 true true 151 54 119 59 96 60 81 50 78 39 87 25 103 18 115 23 121 13 150 1 180 14 189 23 197 17 210 19 222 30 222 44 212 57 192 58
+Polygon -16777216 true false 70 185 74 171 223 172 224 186
+Polygon -16777216 true false 67 211 71 226 224 226 225 211 67 211
+Polygon -16777216 true false 91 257 106 269 195 269 211 255
+Line -1 false 144 100 70 87
+Line -1 false 70 87 45 87
+Line -1 false 45 86 26 97
+Line -1 false 26 96 22 115
+Line -1 false 22 115 25 130
+Line -1 false 26 131 37 141
+Line -1 false 37 141 55 144
+Line -1 false 55 143 143 101
+Line -1 false 141 100 227 138
+Line -1 false 227 138 241 137
+Line -1 false 241 137 249 129
+Line -1 false 249 129 254 110
+Line -1 false 253 108 248 97
+Line -1 false 249 95 235 82
+Line -1 false 235 82 144 100
+
+bee 2
+true
+0
+Polygon -1184463 true false 195 150 105 150 90 165 90 225 105 270 135 300 165 300 195 270 210 225 210 165 195 150
+Rectangle -16777216 true false 90 165 212 185
+Polygon -16777216 true false 90 207 90 226 210 226 210 207
+Polygon -16777216 true false 103 266 198 266 203 246 96 246
+Polygon -6459832 true false 120 150 105 135 105 75 120 60 180 60 195 75 195 135 180 150
+Polygon -6459832 true false 150 15 120 30 120 60 180 60 180 30
+Circle -16777216 true false 105 30 30
+Circle -16777216 true false 165 30 30
+Polygon -7500403 true true 120 90 75 105 15 90 30 75 120 75
+Polygon -16777216 false false 120 75 30 75 15 90 75 105 120 90
+Polygon -7500403 true true 180 75 180 90 225 105 285 90 270 75
+Polygon -16777216 false false 180 75 270 75 285 90 225 105 180 90
+Polygon -7500403 true true 180 75 180 90 195 105 240 195 270 210 285 210 285 150 255 105
+Polygon -16777216 false false 180 75 255 105 285 150 285 210 270 210 240 195 195 105 180 90
+Polygon -7500403 true true 120 75 45 105 15 150 15 210 30 210 60 195 105 105 120 90
+Polygon -16777216 false false 120 75 45 105 15 150 15 210 30 210 60 195 105 105 120 90
+Polygon -16777216 true false 135 300 165 300 180 285 120 285
 
 box
 false
