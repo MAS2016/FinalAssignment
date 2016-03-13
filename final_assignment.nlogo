@@ -14,7 +14,6 @@ globals
    quality-list              ; quality of food sources
    ]
 
-
 ; --- Agents ---
 ; The following types of agents exist:
 ;   1) Scout-bees
@@ -27,7 +26,6 @@ globals
 breed [scouts scout]        ;I suggest we only use Bee in stead of Worker and Scout. Bee is always worker but can become (initial) scout
 breed [workers worker]      ;Tjeerd en ik denken dat het ook correct is om het zo op te delen, aangezien het een best duidelijk afgebakende 'rol' is. Het bereiken van een specifieke agenset zonder 'ifs' erin is ook een voordeel. De paar methods die overeenkomen nemen we dan voor lief.
 breed [queens queen]
-breed [sites site]
 breed [hives hive]
 breed [sensors sensor]
 
@@ -71,15 +69,10 @@ scouts-own [
   belief_food               ; List of food patches with a quality
 
 
-  intention                 ; comparable to "next-task" in BeeSmart: watch-dance, pipe, discover, revisit, go-home, inspect-food-source, dance, take-off, collect-food
+  intention                 ; comparable to "next-task" in BeeSmart: discover, revisit, go-home, inspect-food-source, dance, take-off, collect-food
 
-  belief-initial-scout?     ; true if bee beliefs to be an initial scout who explores unknown food sources
-  belief-no-discovery?      ; true if it is an initial scout and fails to discover any food source on its initial exploration
-  belief-on-site?           ; true if it's inspecting a food source
-  belief-piping?            ; a bee starts to "pipe" when the decision of the best hive is made. true if a bee observes more bees on a certain hive site than the quorum or when it observes other bees piping
+;  belief-on-site?           ; true if it's inspecting a food source
 
-; dance related variables
-  belief-circle-switch       ; when making a waggle dance, a bee alternates left and right to make the figure "8". circle-switch alternates between 1 and -1 to tell a bee which direction to turn.
 ]
 
 ; ###################
@@ -132,7 +125,7 @@ to setup
   clear-all
   setup-food-sources   ; determine food locations with quality
   reset-ticks
-  setup-bees           ; create scouts, workers, and a queen
+  setup-agents          ; create scouts, workers, and a queen
   setup-hives
 ;  setup-ticks
 end
@@ -147,6 +140,7 @@ end
 
 
 to setup-food-sources
+  ; plabel indicates current value of food sources
   set color-list [97.9 94.5 57.5 63.8 17.6 14.9 27.5 25.1 117.9 114.4] ; food sources have different colors for clarity
   set quality-list [100 75 50 1 54 48 40 32 24 16]                     ; food sources have different quality = food value
   ask n-of number_of_food_sources patches with [distancexy 0 0 > 16 and abs pxcor < (max-pxcor - 2) and abs pycor < (max-pycor - 2)][ ;randomly placing food sources around the center in the view with a minimum distance of 16 from the center
@@ -165,38 +159,34 @@ to setup-food-sources
   ]
 end
 
+; --- Setup agents ---
+to setup-agents
+  ; create QUEEN bee on location of hive
+  setup-queen
+  ; create swarm of WORKERS and SCOUTS (dependent on initial_bees & ratio) on location of hive
+  setup-workers
+  setup-scouts
+  ; set current age & max_age
+  ; set current energy & max_energy
+  ; bees have global energy_loss_rate & carrying_capacity
+end
+
 ; herschrijven om aparte scouts en workers te hebben
-to setup-bees
+to setup-scouts
   create-scouts 100 [
     fd random-float 4                  ;let bees spread out from the center
     set my-home patch-here
     set shape "bee"
     set color gray
     set desire "survive"
-    set belief-initial-scout? false
-    set target nobody
     set belief-circle-switch 1
-    set belief-no-discovery? false
     set belief-on-site? false
-    set belief-piping? false
-    set intention "watch-dance"           ;
-;    set task-string "watching-dance"
     ]
-  ask n-of (initial-percentage) scouts[set belief-initial-scout? true set bee-timer random 100] ; assigning some of the scouts to be initial scouts. bee-timer here determines how long they will wait before starting initial exploration
+  ask n-of (initial-percentage) scouts[set bee-timer random 100] ; bee-timer here determines how long they will wait before starting initial exploration
 end
 
 to setup-hives
 
-end
-
-
-; --- Setup agents ---
-to setup-agents
-  ; create QUEEN bee on location of hive
-  ; create swarm of WORKERS and SCOUTS (dependent on initial_bees & ratio) on location of hive
-  ; set current age & max_age
-  ; set current energy & max_energy
-  ; bees have global energy_loss_rate & carrying_capacity
 end
 
 ; --- Setup ticks ---
@@ -495,6 +485,7 @@ to produce-new-queen
 end
 
 to create-new-hive
+
 end
 
 ; --- Send messages ---
