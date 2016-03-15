@@ -583,8 +583,8 @@ GRAPHICS-WINDOW
 32
 -24
 24
-0
-0
+1
+1
 1
 ticks
 120.0
