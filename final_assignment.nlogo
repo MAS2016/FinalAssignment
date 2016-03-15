@@ -621,10 +621,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-9
-378
-76
-411
+7
+356
+74
+389
 SETUP
 setup
 NIL
@@ -638,10 +638,10 @@ NIL
 1
 
 BUTTON
-11
-424
-74
-457
+75
+356
+138
+389
 GO
 go
 T
@@ -730,10 +730,10 @@ NIL
 HORIZONTAL
 
 PLOT
-11
-488
-211
-638
+8
+404
+208
+554
 Number of bees
 Ticks
 Number
