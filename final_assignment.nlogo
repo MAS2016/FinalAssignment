@@ -338,10 +338,9 @@ end
 ; ######################
 ; these include:
 ; 1) move
-; 2) look around
-; 3) migrate
-; 4) eat
-; 5) use energy
+; 2) migrate
+; 3) eat
+; 4) use energy
 
 ; 1) move
 to move
@@ -349,17 +348,12 @@ to move
   forward 1
 end
 
-; 2) look around
-to look-around
-
-end
-
-; 3) migrate
+; 2) migrate
 to migrate
 ;  set target to newest message from queen
 end
 
-; 4) eat
+; 3) eat
 ; increase own energy by 1
 ; decrease food in hive
 to eat
@@ -369,7 +363,7 @@ to eat
   ]
 end
 
-; 5) use energy
+; 4) use energy
 to use-energy
   set energy energy - energy_loss_rate
 end
