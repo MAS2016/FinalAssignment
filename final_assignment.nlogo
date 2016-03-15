@@ -265,6 +265,8 @@ end
   ;     location of new site to migrate to : based on received message from queen
   ;     current amount of food carrying
   ;     current energy level
+  ;
+  ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
 
   ; SCOUTS:
   ;     location of own hive
@@ -536,6 +538,19 @@ end
   ; queen -> workers & scouts: set outgoing_messages to location of new site and set incoming_messages of SOME bees to this location.
 ;end
 
+; Scout message to worker
+; patch
+; message to percentage of workers in hive
+; ask (n-of (scout_message_effectiveness * number of workers in hive)  workers)
+
+; Scout message to queen
+; if quality of patch reaches threshold, scout communicates:
+; patch and quality
+
+; Queen message to workers & scouts
+; new hive location
+; if new hive location --> migrate (queen message effectiveness)
+
 ; --- Send messages ---
 ;to send-messages
 ;  ; Here should put the code related to sending messages to other agents.
@@ -561,11 +576,12 @@ end
 ;     ]
 ;    ]
 ;end
+
 @#$#@#$#@
 GRAPHICS-WINDOW
-221
+248
 12
-946
+973
 582
 32
 24
@@ -605,10 +621,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-18
-276
-85
-309
+9
+378
+76
+411
 SETUP
 setup
 NIL
@@ -622,10 +638,10 @@ NIL
 1
 
 BUTTON
-20
-322
-83
-355
+11
+424
+74
+457
 GO
 go
 T
@@ -714,10 +730,10 @@ NIL
 HORIZONTAL
 
 PLOT
-950
-12
-1150
-162
+11
+488
+211
+638
 Number of bees
 Ticks
 Number
@@ -744,6 +760,36 @@ initial_bees
 100
 100
 1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+8
+279
+244
+312
+scout_message_effectiveness
+scout_message_effectiveness
+0
+1
+0.75
+0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+7
+314
+247
+347
+queen_message_effectiveness
+queen_message_effectiveness
+0
+1
+0.75
+0.05
 1
 NIL
 HORIZONTAL
