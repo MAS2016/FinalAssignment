@@ -408,8 +408,9 @@ end
 to calculate-quality
 ; If on a new patch, the quality of this patch is assessed.
 ; This is done by checking the list of known patches with food.
-; Determine the 'total gain' - i.e. the sum of: (total food in patch) / (carrying capacity - energy cost to reach food)
+; Determine the 'total gain' - i.e. for a given radius the sum of: (total food in patch) / (carrying capacity - energy cost to reach food)
 ; energy cost to reach food = (distance to patch) * 2 (to and from) * energy_loss_rate
+; if (other) hive in radius, set quality to 0
 ; save the quality of the site
 end
 
