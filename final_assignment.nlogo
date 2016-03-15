@@ -401,6 +401,12 @@ to execute-scout-actions
   ]
 end
 
+to look-around
+  ; spawn sensors in radius
+  ; let sensors check
+  ; let sensors die
+end
+
 to fly-to-hive
 
 end
@@ -622,10 +628,10 @@ NIL
 HORIZONTAL
 
 BUTTON
-7
-356
-74
-389
+8
+406
+75
+439
 SETUP
 setup
 NIL
@@ -639,10 +645,10 @@ NIL
 1
 
 BUTTON
-75
-356
-138
-389
+76
+406
+139
+439
 GO
 go
 T
@@ -731,10 +737,10 @@ NIL
 HORIZONTAL
 
 PLOT
-8
-404
-208
-554
+9
+454
+209
+604
 Number of bees
 Ticks
 Number
@@ -791,6 +797,21 @@ queen_message_effectiveness
 1
 0.75
 0.05
+1
+NIL
+HORIZONTAL
+
+SLIDER
+8
+361
+180
+394
+scout_radius
+scout_radius
+0
+5
+2
+0.5
 1
 NIL
 HORIZONTAL
