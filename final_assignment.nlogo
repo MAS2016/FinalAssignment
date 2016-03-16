@@ -120,7 +120,6 @@ to setup
 
 end
 
-
 ; --- Setup food-sources ---
 to setup-food-sources
   ask patches [set pcolor white]
@@ -208,7 +207,7 @@ to setup-workers
   ]
 end
 
-; herschrijven om aparte scouts en workers te hebben
+
 to setup-scouts
   create-scouts round (scout_worker_ratio * (initial_bees / (scout_worker_ratio + 1))) [
     move-to [patch-here] of hive 0
@@ -227,6 +226,13 @@ end
 
 
 ;-------------------------------------------------------------------------------------------------
+
+to go
+  ask scouts [move-around]
+  ask workers [move-around]
+  ask queens [move-around]
+  tick
+end
 
 ; --- Main processing cycle ---
 ;to go
@@ -298,15 +304,16 @@ end
   ; WORKERS:
   ;     wait for message  : if no belief about food location
   ;     fly to location   : if there is a belief about food location and it believes energy is sufficient
-  ;     walk around       : als locatie die scout doorgaf niet goed is, dan zelf food vinden
+  ;     move around       : als locatie die scout doorgaf niet goed is, dan zelf food vinden
   ;     look around
   ;     collect food      : if current location = food location in belief & food_value > 0 & carrying < carrying_capacity
-  ;     drop food in hive : if it believes it carries food
+  ;     fly to hive       : if it carries food
+  ;     drop food in hive : if it believes it carries food and is in hive
   ;     eat               : if belief energy level is below max_energy and bee is at own hive
   ;     migrate           : if received message from queen
 
   ; SCOUTS:
-  ;     walk around       : if no beliefs about food or location of new site -> observe (walk & look around)
+  ;     move around       : if no beliefs about food or location of new site -> observe (walk & look around)
   ;     look around
   ;     fly to hive       : if it believes there is food or a good new site
   ;     tell worker about location of food : if it believes there is food somewhere and it is at the hive
@@ -338,23 +345,17 @@ end
 ; #  GENERAL METHODS   #
 ; ######################
 ; these include:
-; 1) move
-; 2) migrate
-; 3) eat
-; 4) use energy
+; 1) migrate
+; 2) eat
+; 3) use energy
 
-; 1) move
-to move
-  set heading first beliefs
-  forward 1
-end
 
-; 2) migrate
+; 1) migrate
 to migrate
 ;  set target to newest message from queen
 end
 
-; 3) eat
+; 2) eat
 ; increase own energy by 1
 ; decrease food in hive
 to eat
@@ -364,7 +365,7 @@ to eat
   ]
 end
 
-; 4) use energy
+; 3) use energy
 to use-energy
   set energy energy - energy_loss_rate
 end
@@ -374,7 +375,7 @@ end
 ; ######################
 
   ; SCOUTS:
-  ;     move                 --> move in random direction
+  ;     move-around          --> move in random direction
   ;     look around          --> check sensors for food
   ;     fly to hive          --> move straight to own hive
   ;     tell worker about location of food --> send-messages (to workers)
@@ -384,7 +385,7 @@ end
 
 to execute-scout-actions
   ask scouts [
-    ifelse intention = "move" [move][
+    ifelse intention = "move around" [move-around][
     ifelse intention = "look around" [look-around][
     ifelse intention = "fly to hive" [fly-to-hive][
     ifelse intention = "tell worker about location of food" [tell-worker][
@@ -394,6 +395,10 @@ to execute-scout-actions
     ]]]]]]
 
   ]
+end
+
+to move-around
+  rt (random 60 - random 60) fd random-float .1
 end
 
 to look-around
@@ -425,15 +430,16 @@ end
 ; #   WORKER METHODS   #
 ; ######################
 
-  ; WORKERS (always desires to collect food):
-  ;     wait for message     --> swarm around at own hive
-  ;     fly to location      --> move to potential food location (look around not yet necessary) (this is actually incorporated in 'move' and beliefs
-  ;     walk around          --> when location does not appear to have food, then walk & look around
-  ;     look around          --> check sensors
-  ;     collect food         --> carrying + 1 & food_value of food at location - 1
-  ;     drop food in hive    --> carrying = 0 & total_food_in_hive += carrying
-  ;     eat                  --> energy + 1 & total_food_in_hive - 1
-  ;     migrate              --> move straight to new site location and set own hive to this location
+  ; WORKERS:
+  ;     wait for message  : if no belief about food location
+  ;     fly to location   : if there is a belief about food location and it believes energy is sufficient
+  ;     move around       : als locatie die scout doorgaf niet goed is, dan zelf food vinden
+  ;     look around
+  ;     collect food      : if current location = food location in belief & food_value > 0 & carrying < carrying_capacity
+  ;     fly to hive       : if it carries food
+  ;     drop food in hive : if it believes it carries food and is in hive
+  ;     eat               : if belief energy level is below max_energy and bee is at own hive
+  ;     migrate           : if received message from queen
 
 to execute-worker-actions
   ifelse intention = "wait for message" [wait-for-message][
@@ -442,6 +448,11 @@ to execute-worker-actions
   ifelse intention = "" [][
   ifelse intention = "" [][
   ]]]]]
+end
+
+to move
+  set heading first beliefs
+  forward 1
 end
 
 to wait-for-message
