@@ -197,7 +197,8 @@ to setup-queen
     set max_energy random-normal 70 30
     set beliefs []
     set hive_beliefs []
-    set incoming_messages []
+    set incoming_messages_from_scout []
+    set incoming_message_from_queen []
     set outgoing_messages []
   ]
 end
@@ -261,7 +262,7 @@ to update-desires
   ; WORKERS:
   ;     'collect food'                     : forever
   ask workers
-    [set desire "collect food"]
+    [set desire "provide colony with food"]
 
   ; SCOUTS:
   ;     'find food & optimal hive location': forever
@@ -288,9 +289,13 @@ to update-beliefs
   ;
   ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
 
-  ask workers
-    [set beliefs incoming_message_from_scout]  ; belief about location of food, received from scout
+  ask workers [
+    if not empty? incoming_message_from_scout
+      [set beliefs incoming_message_from_scout]  ; belief about location of food, received from scout
 
+    if not empty? incoming_message_from_queen
+      [set beliefs lput incoming_message_from_queen beliefs]
+  ]
 
   ; SCOUTS:
   ;     location of own hive
@@ -329,10 +334,14 @@ to update-beliefs
     if item 0 bees_in_hive >= item 0 [bee_capacity] of hives-here   ; if number of bees in hive reaches hive threshold
       [set hive_beliefs "hive is full"]           ; queen believes that hive is full
 
-    if not empty? incoming_messages                ; if queen receives message (from scout)
-      [ set beliefs fput incoming_messages beliefs ; put it in beliefbase
+    if not empty? incoming_messages_from_scout      ; if queen receives message from scout
+      [ set beliefs fput incoming_messages_from_scout beliefs  ; put it in beliefbase
         set beliefs remove-duplicates beliefs]
+
+    if not empty? incoming_message_from_queen
+      [set beliefs lput incoming_message_from_queen beliefs]
   ]
+
 end
 
 ; --- Update intentions ---
@@ -350,17 +359,20 @@ to update-intentions
   ;     migrate           : if received message from queen
 
   ask workers [
-    ifelse empty? beliefs[set intention "wait for message"][
-    ifelse patch-here = beliefs and carrying < carrying_capacity and [food_value] of patch-here > 0 [set intention "collect food"][
-    ifelse carrying = 0 and (distance beliefs * 2 * energy_loss_rate) < energy [set intention "fly to location"][
-    ifelse patch-here != my_home [set intention "fly to hive"][
-    set intention "drop food in hive"
+    if desire = "provide colony with food"
+    [
+    ifelse empty? beliefs[set intention "wait for message"][   ; if worker has beliefs about food, set intention to wait for message
+    ifelse patch-here = beliefs and carrying < carrying_capacity and [food_value] of patch-here > 0 [set intention "collect food"][ ; if above is not true, and current location = food location in belief & food has food value & worker can still carry food, he intends to collect food
+    ifelse carrying = 0 and (distance beliefs * 2 * energy_loss_rate) < energy [set intention "fly to location"][  ; if above is not true, and worker carries food, and beliefs that it has enough energy to collect the food, he intends to fly to location of food
+    ifelse patch-here != my_home [set intention "fly to hive"][  ; if above is not true, and worker is not yet at hive, then he intends to fly to hive
+    set intention "drop food in hive" ; if above is not true, worker intends to drop food in hive
     ]]]]
+    ]
 
-    if energy < max_energy and patch-here = my_home
+    if energy < max_energy and patch-here = my_home  ; if worker has less energy than max energy and is at hive, he intends to eat
       [set intention "eat"]
 
-    if intention = "wait for message" and not empty? incoming_message_from_queen
+    if item 1 beliefs = incoming_message_from_queen  ; if worker has belief about location of new hive (send by queen), then he intends to migrate
       [set intention "migrate"]
 
   ]
