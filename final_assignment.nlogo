@@ -22,6 +22,7 @@ globals
 ;   5) Hives
 ;   6) Sensors (sensors that allow an agent to observe the environment)
 ;   (optional: enemy)
+
 breed [scouts scout]
 breed [workers worker]
 breed [queens queen]
@@ -46,6 +47,7 @@ breed [sensors sensor]
 ;  11) food_value             : the amount of food that is stored in a source
 ;  12) max_food_value         : maximum amount of food that can be stored in a source (i.e. its quality)
 
+
 ; FOR HIVES:
 ;  13) total_food_in_hive     : the current amount of food that a hive holds
 ;  14) total_bees_in_hive     : the current amount of bees that a hive holds
@@ -63,8 +65,10 @@ scouts-own [
   energy
   max_energy
   incoming_messages
-  outgoing_messages
+  outgoing_message_food
+  outgoing_messages_sites
   my_home
+  observed_food_source
 ]
 
 ; ###################
@@ -130,7 +134,6 @@ to setup-food-sources
       set max_food_value random-normal 30 20   ; set max food value according to a normal distribution
       set-color                                ; set color according to max food value
       set food_value max_food_value            ; set initial food value to maximum
-      set-color                                ; set color according to food value
       set plabel food_value
       set plabel-color white
     ]
@@ -158,11 +161,11 @@ end
 to setup-hive
     create-hives 1 [
       setxy (random max-pxcor) (random min-pycor)
-      set shape "hive"
+      set shape "tree"
       set color yellow
       set size 3
       set total_food_in_hive 0
-      set label total_food_in_hive set label-color red
+      set label total_food_in_hive set label-color black
       set total_bees_in_hive initial_bees
     ]
 end
@@ -248,25 +251,19 @@ end
 
 ; --- Update desires ---
 
-to update-desires
+;to update-desires
   ; every agent: survive (of we laten deze geheel weg en nemen alleen specifieke mee)
 
   ; WORKERS:
   ;     'collect food'                     : forever
-  ask workers
-    [set desire "collect food"]
 
   ; SCOUTS:
   ;     'find food & optimal hive location': forever
-  ask scouts
-    [set desire "find food & optimal hive location"]
 
   ; QUEEN(S):
-  ;     'manage colony'                    : else
-  ask queens
-    [set desire "manage colony"]
+  ;     'migrate'                          : if it beliefs hive is full
+  ;     'manage hive'                      : else
 
-end
 
 ; --- Update beliefs ---
 to update-beliefs
@@ -295,7 +292,7 @@ to update-beliefs
 
   ask scouts []
     ;[update-food-sources]
-
+; update food source list
   ; QUEEN(S):
   ;     number of workers
   ;     number of scouts
@@ -331,7 +328,7 @@ to update-intentions
   ;     look around
   ;     fly to hive       : if it believes there is food or a good new site
   ;     tell worker about location of food : if it believes there is food somewhere and it is at the hive
-  ;     tell queen about location & quality of new site : if it has belief about new site and is at hive
+  ;     tell queen about location and quality of new site : if it has belief about new site and is at hive
   ;     migrate           : if received message from queen
 
   ; QUEEN(S):
@@ -402,7 +399,7 @@ to execute-scout-actions
     ifelse intention = "move around" [move-around][
     ifelse intention = "look around" [look-around][
     ifelse intention = "fly to hive" [fly-to-hive][
-    ifelse intention = "tell worker about location of food" [tell-worker][
+    ifelse intention = "tell worker about location of food" [tell-workers][
     ifelse intention = "tell queen about location and quality of new site" [tell-queen][
     ifelse intention = "migrate" [migrate][
     if intention = "eat"[eat]
@@ -419,6 +416,36 @@ to look-around
   ; spawn sensors in radius
   ; let sensors check
   ; let sensors die
+  let bee self
+  let col [color]  of self
+  ask patches in-radius scout_radius[
+    sprout-sensors 1[
+      create-link-with bee
+      set shape "dot"
+      set color col
+    ]
+  ]
+  ask my-links [set color col]
+end
+
+
+; scout calls this method
+; add new element consisting of patch and max food value to list of food sources
+to update-food-sources
+  let bee self
+  ask my-links [
+    let p patch-here
+    let food_val [max_food_value] of p
+    let food_source list (p) (food_val)
+    if food_val > 0 [                             ; if there is food in observed the patch
+      ask bee[
+        set observed_food_source food_source      ; add to observed food source for telling worker
+        if not member? food_source beliefs [      ; if patch is not in known food sources...
+          set beliefs lput food_source beliefs    ; ...add to total belief base
+        ]
+      ]
+    ]
+  ]
 end
 
 to fly-to-hive
@@ -434,7 +461,8 @@ to calculate-quality
 ; save the quality of the site
 end
 
-to tell-worker
+to tell-workers
+  set outgoing_message_food observed_food_source
 end
 
 to tell-queen
@@ -565,6 +593,47 @@ end
   ; queen -> workers & scouts: set outgoing_messages to location of new site and set incoming_messages of SOME bees to this location.
 ;end
 
+to send-messages
+  send-scout-messages
+  send-queen-messages
+end
+
+to process-messages
+end
+
+to send-queen-messages
+  if not empty? outgoing_messages [ ; if there is a message for the scouts and workers
+    ; send it to n-of workers dependent on queen_message_effectiveness
+    ; send it to n-of scouts dependent on queen_message_effectiveness
+  ]
+end
+
+to send-scout-messages
+  ask scouts [if intention = "tell worker about location of food"
+    [send-scout-message-to-workers]
+  ]
+  ask scouts [if intention = "tell queen about location and quality of new site"
+    [send-scout-message-to-queen]
+  ]
+end
+
+to send-scout-message-to-workers
+  if not empty? outgoing_message_food [ ; if there is a message for the workers
+    ;send it to n-of workers dependent on scout_message_effectiveness
+    let msg outgoing_message_food
+    ask n-of (scout_message_effectiveness * count workers-here) workers-here [
+      set incoming_messages msg
+    ]
+  ]
+end
+
+to send-scout-message-to-queen
+  if not empty? outgoing_messages_sites [ ; if there is a message for the queen
+    let msg outgoing_messages_sites
+    ; ask queen at my_home
+  ]
+end
+
 ; Scout message to worker
 ; patch
 ; message to percentage of workers in hive
@@ -577,32 +646,6 @@ end
 ; Queen message to workers & scouts
 ; new hive location
 ; if new hive location --> migrate (queen message effectiveness)
-
-; --- Send messages ---
-;to send-messages
-;  ; Here should put the code related to sending messages to other agents.
-;  ; Note that this could be seen as a special case of executing actions, but for conceptual clarity it has been put in a separate method.
-;  ask vacuums [
-;    if not empty? outgoing_messages
-;    [
-;      ; check welke ontvanger bericht moet krijgen
-;      ; stuur naar specifieke ontvanger
-;      foreach outgoing_messages [
-;        let msg ?
-;        if not member? msg sent_messages[
-;          set sent_messages lput msg sent_messages
-;          let col [color] of self
-;          ask vacuums with [color = item 1 msg]
-;          [ ;message color
-;            let in_msg list (item 0 msg) (col)
-;            set incoming_messages lput in_msg incoming_messages
-;          ]
-;          set outgoing_messages remove-item 0 outgoing_messages
-;        ]
-;      ]
-;     ]
-;    ]
-;end
 @#$#@#$#@
 GRAPHICS-WINDOW
 248
