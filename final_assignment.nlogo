@@ -285,13 +285,10 @@ to update-beliefs
   ;
   ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
 
-<<<<<<< Updated upstream
   ask workers
     [set beliefs incoming_messages]  ; belief about location of food, received from scout
 
 
-=======
->>>>>>> Stashed changes
   ; SCOUTS:
   ;     location of own hive
   ;     locations of new food source       : based on observation via its sensors (evt. niet altijd de juiste)
@@ -300,13 +297,9 @@ to update-beliefs
   ;     location of new site to migrate to : based on received message from queen
   ;     current energy level
 
-<<<<<<< Updated upstream
   ask scouts []
     ;[update-food-sources]
-=======
 ; update food source list
->>>>>>> Stashed changes
-
   ; QUEEN(S):
   ;     number of workers
   ;     number of scouts
@@ -444,18 +437,18 @@ end
 
 
 ; scout calls this method
+; add new element consisting of patch and max food value to list of food sources
 to update-food-sources
-  ; add new element consisting of patch and max food value to list
   let bee self
   ask my-links [
     let p patch-here
     let food_val [max_food_value] of p
     let food_source list (p) (food_val)
-    if food_val > 0 [ ; if there is food in observed the patch
+    if food_val > 0 [                             ; if there is food in observed the patch
       ask bee[
-        set observed_food_source food_source
-        ifelse not member? food_source beliefs [ ; if patch is not in known food sources, add to new food sources and total belief base
-          set beliefs lput food_source beliefs
+        set observed_food_source food_source      ; add to observed food source for telling worker
+        if not member? food_source beliefs [      ; if patch is not in known food sources...
+          set beliefs lput food_source beliefs    ; ...add to total belief base
         ]
       ]
     ]
