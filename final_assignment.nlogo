@@ -64,7 +64,7 @@ scouts-own [
   max_age
   energy
   max_energy
-  incoming_messages
+  incoming_message_from_queen
   outgoing_message_food
   outgoing_messages_sites
   my_home
@@ -83,7 +83,8 @@ workers-own [
   max_age
   energy
   max_energy
-  incoming_messages
+  incoming_message_from_scout
+  incoming_message_from_queen
   carrying
   my_home
 ]
@@ -626,7 +627,7 @@ to send-scout-message-to-workers
     let h my_home
     ; get number of bees waiting for a message
     ask n-of (scout_message_effectiveness * count workers with [my_home = h and intention = "wait for message"]) workers with [my_home = h and intention = "wait for message"] [
-      set incoming_messages msg ; set the incoming message to the food source found by scout
+      set incoming_message_from_scout msg ; set the incoming message to the food source found by scout
     ]
   ]
 end
