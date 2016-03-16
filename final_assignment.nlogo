@@ -65,7 +65,8 @@ scouts-own [
   energy
   max_energy
   incoming_messages
-  outgoing_messages
+  outgoing_message_food
+  outgoing_messages_sites
   my_home
   observed_food_source
 ]
@@ -412,7 +413,7 @@ to execute-scout-actions
     ifelse intention = "move around" [move-around][
     ifelse intention = "look around" [look-around][
     ifelse intention = "fly to hive" [fly-to-hive][
-    ifelse intention = "tell worker about location of food" [tell-worker][
+    ifelse intention = "tell worker about location of food" [tell-workers][
     ifelse intention = "tell queen about location and quality of new site" [tell-queen][
     ifelse intention = "migrate" [migrate][
     if intention = "eat"[eat]
@@ -451,12 +452,13 @@ to update-food-sources
     let food_val [max_food_value] of p
     let food_source list (p) (food_val)
     if food_val > 0 [ ; if there is food in observed the patch
-      set observed_food_source food_source
-      ifelse not member? food_source beliefs [ ; if patch is not in known food sources, add to new food sources and total belief base
-        set beliefs lput food_source beliefs
+      ask bee[
+        set observed_food_source food_source
+        ifelse not member? food_source beliefs [ ; if patch is not in known food sources, add to new food sources and total belief base
+          set beliefs lput food_source beliefs
+        ]
       ]
     ]
-
   ]
 end
 
@@ -473,7 +475,8 @@ to calculate-quality
 ; save the quality of the site
 end
 
-to tell-worker
+to tell-workers
+  set outgoing_message_food observed_food_source
 end
 
 to tell-queen
@@ -603,6 +606,34 @@ end
   ; scout -> queen           : set outgoing_messages to location & quality of new site and set incoming_messages of queen to this.
   ; queen -> workers & scouts: set outgoing_messages to location of new site and set incoming_messages of SOME bees to this location.
 ;end
+
+to send-messages
+  send-scout-messages
+  send-queen-messages
+end
+
+to send-queen-messages
+  if not empty? outgoing_messages [ ; if there is a message for the scouts and workers
+    ; send it to n-of workers dependent on queen_message_effectiveness
+    ; send it to n-of scouts dependent on queen_message_effectiveness
+  ]
+end
+
+to send-scout-messages
+  send-scout-message-to-workers
+  send-scout-message-to-queen
+end
+
+to send-scout-message-to-workers
+  if not empty? outgoing_message_food [ ; if there is a message for the workers
+    ;send it to n-of workers dependent on scout_message_effectiveness
+  ]
+end
+
+to send-scout-message-to-queen
+  if not empty? outgoing_messages_sites [ ; if there is a message for the queen
+  ]
+end
 
 ; Scout message to worker
 ; patch
