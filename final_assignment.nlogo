@@ -7,6 +7,8 @@
 ;   5) bee_capacity           : the total number of bees that a hive can hold
 ;   6) energy_loss_rate       : the speed at which bees lose energy (kan evt. ook lokaal)
 ;   7) carrying_capacity      : the maximum amount of food a worker bee can carry
+;   8) gain_from_food         : amount of energy that bees gain from eating 1 food
+;   9) color-list             : global list of colors to indicate food source quality (max_food_value)
 
 globals
   [color-list]
@@ -20,8 +22,9 @@ globals
 ;   5) Hives
 ;   6) Sensors (sensors that allow an agent to observe the environment)
 ;   (optional: enemy)
-breed [scouts scout]        ;I suggest we only use Bee in stead of Worker and Scout. Bee is always worker but can become (initial) scout
-breed [workers worker]      ;Tjeerd en ik denken dat het ook correct is om het zo op te delen, aangezien het een best duidelijk afgebakende 'rol' is. Het bereiken van een specifieke agenset zonder 'ifs' erin is ook een voordeel. De paar methods die overeenkomen nemen we dan voor lief.
+
+breed [scouts scout]
+breed [workers worker]
 breed [queens queen]
 breed [hives hive]
 breed [sensors sensor]
@@ -42,10 +45,12 @@ breed [sensors sensor]
 
 ; FOR FOOD SOURCE (patches):
 ;  11) food_value             : the amount of food that is stored in a source
+;  12) max_food_value         : maximum amount of food that can be stored in a source (i.e. its quality)
+
 
 ; FOR HIVES:
-;  12) total_food_in_hive     : the current amount of food that a hive holds
-;  13) total_bees_in_hive     : the current amount of bees that a hive holds
+;  13) total_food_in_hive     : the current amount of food that a hive holds
+;  14) total_bees_in_hive     : the current amount of bees that a hive holds
 
 ; ###################
 ; #   SCOUT AGENT   #
@@ -105,7 +110,7 @@ queens-own [
 
 hives-own[total_food_in_hive total_bees_in_hive]
 
-patches-own [food_value]
+patches-own [food_value max_food_value]
 ;--------------------------------------------------------------------------------------------------
 
 ; --- Setup ---
@@ -125,8 +130,9 @@ end
 to setup-food-sources
   ask patches [set pcolor white]
     ask n-of number_of_food_sources patches [  ; ask random patches to become food
-      set food_value random-normal 30 20       ; set food value according to a normal distribution
-      set-color                                ; set color according to food value
+      set max_food_value random-normal 30 20   ; set max food value according to a normal distribution
+      set-color                                ; set color according to max food value
+      set food_value max_food_value            ; set initial food value to maximum
       set plabel food_value
       set plabel-color white
     ]
@@ -134,18 +140,18 @@ end
 
 to set-color
   set color-list [129 129 128.5 128 127.5 127 126.5 126 125 124 123 122]
-  ifelse food_value < 10 [set pcolor item 0 color-list][
-  ifelse food_value < 15 [set pcolor item 1 color-list][
-  ifelse food_value < 20 [set pcolor item 2 color-list][
-  ifelse food_value < 25 [set pcolor item 3 color-list][
-  ifelse food_value < 30 [set pcolor item 4 color-list][
-  ifelse food_value < 35 [set pcolor item 5 color-list][
-  ifelse food_value < 40 [set pcolor item 6 color-list][
-  ifelse food_value < 45 [set pcolor item 7 color-list][
-  ifelse food_value < 50 [set pcolor item 8 color-list][
-  ifelse food_value < 55 [set pcolor item 9 color-list][
-  ifelse food_value < 60 [set pcolor item 10 color-list][
-  if food_value >= 60 [set pcolor item 11 color-list]
+  ifelse max_food_value < 10 [set pcolor item 0 color-list][
+  ifelse max_food_value < 15 [set pcolor item 1 color-list][
+  ifelse max_food_value < 20 [set pcolor item 2 color-list][
+  ifelse max_food_value < 25 [set pcolor item 3 color-list][
+  ifelse max_food_value < 30 [set pcolor item 4 color-list][
+  ifelse max_food_value < 35 [set pcolor item 5 color-list][
+  ifelse max_food_value < 40 [set pcolor item 6 color-list][
+  ifelse max_food_value < 45 [set pcolor item 7 color-list][
+  ifelse max_food_value < 50 [set pcolor item 8 color-list][
+  ifelse max_food_value < 55 [set pcolor item 9 color-list][
+  ifelse max_food_value < 60 [set pcolor item 10 color-list][
+  if max_food_value >= 60 [set pcolor item 11 color-list]
   ]]]]]]]]]]]
 end
 
@@ -183,9 +189,10 @@ to setup-queen
     set size 2
     set color red
     set my_home [patch-here] of hive 0
+    set beliefs []
+    set incoming_messages []
+    set outgoing_messages []
     set age 0
-
-    ; Values below are arbitrarily chosen for now
     set max_age random-normal 50 10
     set energy 100
     set max_energy random-normal 70 30
@@ -199,9 +206,9 @@ to setup-workers
     set shape "bee"
     set color black
     set my_home [patch-here] of hive 0
+    set beliefs []
+    set incoming_messages []
     set age 0
-
-    ; Values below are arbitrarily chosen for now
     set max_age random-normal 50 10
     set energy 100
     set max_energy random-normal 70 30
@@ -214,11 +221,13 @@ to setup-scouts
     move-to [patch-here] of hive 0
     fd random-float 4
     set shape "bee"
-    set color blue
+    set size 1.5
+    set color red
     set my_home [patch-here] of hive 0
+    set beliefs []
+    set incoming_messages []
+    set outgoing_messages []
     set age 0
-
-    ; Values below are arbitrarily chosen for now
     set max_age random-normal 50 10
     set energy 100
     set max_energy random-normal 70 30
@@ -228,23 +237,16 @@ end
 
 ;-------------------------------------------------------------------------------------------------
 
+; --- Main processing cycle ---
 to go
-  ask scouts [move-around]
-  ask workers [move-around]
-  ask queens [move-around]
+  update-desires
+  update-beliefs
+  update-intentions
+  execute-actions
+  send-messages
+  increase-age
   tick
 end
-
-; --- Main processing cycle ---
-;to go
-;  update-desires
-;  update-beliefs
-;  update-intentions
-;  execute-actions
-;  send-messages
-;  increase-age
-;  tick
-;end
 
 ; --- Update desires ---
 
@@ -263,19 +265,25 @@ end
 
 
 ; --- Update beliefs ---
+to update-beliefs
+; to reduce computational load, beliefs about location of own hive, current amount of food carrying, energy level, age, and number of bees in hive are not explicitely implemented as beliefs
+
   ; WORKERS:
-  ;     location of own hive
+  ;     location of own hive (my_home)
   ;     probable location of 1 food source : based on received message from scout (incoming_messages)
-  ;                                        : realistisch zou zijn om niet altijd de precieze locatie te geven
-  ;                                          maar soms eentje 'in de buurt'. De worker vliegt daar dan heen en
-  ;                                          en moet zelf de precieze locatie vinden (bv. 2 patches verderop).
-  ;                                          Als we dit niet doen, heeft worker eigenlijk geen sensors nodig.
-  ;     location of new site to migrate to : based on received message from queen
+  ;     location of new site to migrate to : based on received message from queen (delete if at this location)
   ;     current amount of food carrying
   ;     current energy level
   ;
   ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
 
+<<<<<<< Updated upstream
+  ask workers
+    [set beliefs incoming_messages]  ; belief about location of food, received from scout
+
+
+=======
+>>>>>>> Stashed changes
   ; SCOUTS:
   ;     location of own hive
   ;     locations of new food source       : based on observation via its sensors (evt. niet altijd de juiste)
@@ -284,7 +292,12 @@ end
   ;     location of new site to migrate to : based on received message from queen
   ;     current energy level
 
+<<<<<<< Updated upstream
+  ask scouts []
+    ;[update-food-sources]
+=======
 ; update food source list
+>>>>>>> Stashed changes
 
   ; QUEEN(S):
   ;     number of workers
@@ -294,11 +307,17 @@ end
   ;     location and quality of new sites  : based on received messages from scouts
   ;     current energy level
 
+  ask queens[
+    let blf_workers (count workers)
+  ]
+
+end
 
 ; --- Update intentions ---
 ; SHOULD BE DEPENDENT UPON BELIEFS & DESIRES
 ; 'Observe' should be split into 2 intentions: 'walk around' and 'look around'
 
+to update-intentions
   ; WORKERS:
   ;     wait for message  : if no belief about food location
   ;     fly to location   : if there is a belief about food location and it believes energy is sufficient
@@ -327,7 +346,7 @@ end
   ;     migrate to new site    : if belief own hive != current location
   ;     create new hive        : if current location = belief location of new (optimal) site
 
-
+  end
 ; --- Execute actions ---
 ; ACTIONS SHOULD IMMEDIATELY FOLLOW AN INTENTION
 ; opnieuw is het denk ik goed om 1 actie per tick te laten uitvoeren
@@ -418,15 +437,15 @@ end
 
 ; scout calls this method
 to update-food-sources
-  ; voeg nieuw element bestaande uit ['patch', 'kleur'] aan lijst toe
+  ; add new element consisting of patch and max food value to list
   let bee self
   ask my-links [
     let p patch-here
-    let col pcolor
-    let food_source list (p) (col)
+    let food_val [max_food_value] of p
+    let food_source list (p) (food_val)
     ifelse pcolor != white [
     ; if patch is in known food sources, do not add to new food sources
-    if not member? food_source beliefs
+    if not member? food_source beliefs []
     ][
 
     ]
@@ -1073,6 +1092,16 @@ Circle -16777216 true false 113 68 74
 Polygon -10899396 true false 189 233 219 188 249 173 279 188 234 218
 Polygon -10899396 true false 180 255 150 210 105 210 75 240 135 240
 
+hive
+false
+0
+Circle -7500403 true true 118 203 94
+Rectangle -6459832 true false 120 0 180 105
+Circle -7500403 true true 65 171 108
+Circle -7500403 true true 116 132 127
+Circle -7500403 true true 45 90 120
+Circle -7500403 true true 104 74 152
+
 house
 false
 0
@@ -1163,16 +1192,6 @@ Circle -16777216 true false 30 30 240
 Circle -7500403 true true 60 60 180
 Circle -16777216 true false 90 90 120
 Circle -7500403 true true 120 120 60
-
-tree
-false
-0
-Circle -7500403 true true 118 3 94
-Rectangle -6459832 true false 120 195 180 300
-Circle -7500403 true true 65 21 108
-Circle -7500403 true true 116 41 127
-Circle -7500403 true true 45 90 120
-Circle -7500403 true true 104 74 152
 
 triangle
 false
