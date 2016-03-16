@@ -603,10 +603,10 @@ end
 
 to send-messages
   send-scout-messages
-  send-queen-messages
+  send-queen-messages-to-bees
 end
 
-to send-queen-messages
+to send-queen-messages-to-bees
   if not empty? outgoing_messages [ ; if there is a message for the scouts and workers
     ; send it to n-of workers dependent on queen_message_effectiveness
     ; send it to n-of scouts dependent on queen_message_effectiveness
@@ -643,19 +643,6 @@ to send-scout-message-to-queen
     ]
   ]
 end
-
-; Scout message to worker
-; patch
-; message to percentage of workers in hive
-; ask (n-of (scout_message_effectiveness * number of workers in hive)  workers)
-
-; Scout message to queen
-; if quality of patch reaches threshold, scout communicates:
-; patch and quality
-
-; Queen message to workers & scouts
-; new hive location
-; if new hive location --> migrate (queen message effectiveness)
 @#$#@#$#@
 GRAPHICS-WINDOW
 248
