@@ -22,6 +22,7 @@ globals
 ;   5) Hives
 ;   6) Sensors (sensors that allow an agent to observe the environment)
 ;   (optional: enemy)
+
 breed [scouts scout]
 breed [workers worker]
 breed [queens queen]
@@ -46,6 +47,7 @@ breed [sensors sensor]
 ;  11) food_value             : the amount of food that is stored in a source
 ;  12) max_food_value         : maximum amount of food that can be stored in a source (i.e. its quality)
 
+
 ; FOR HIVES:
 ;  13) total_food_in_hive     : the current amount of food that a hive holds
 ;  14) total_bees_in_hive     : the current amount of bees that a hive holds
@@ -65,6 +67,7 @@ scouts-own [
   incoming_messages
   outgoing_messages
   my_home
+  new_food_sources
 ]
 
 ; ###################
@@ -130,7 +133,6 @@ to setup-food-sources
       set max_food_value random-normal 30 20   ; set max food value according to a normal distribution
       set-color                                ; set color according to max food value
       set food_value max_food_value            ; set initial food value to maximum
-      set-color                                ; set color according to food value
       set plabel food_value
       set plabel-color white
     ]
@@ -158,11 +160,11 @@ end
 to setup-hive
     create-hives 1 [
       setxy (random max-pxcor) (random min-pycor)
-      set shape "hive"
+      set shape "tree"
       set color yellow
       set size 3
       set total_food_in_hive 0
-      set label total_food_in_hive set label-color red
+      set label total_food_in_hive set label-color black
       set total_bees_in_hive initial_bees
     ]
 end
@@ -255,25 +257,19 @@ end
 
 ; --- Update desires ---
 
-to update-desires
+;to update-desires
   ; every agent: survive (of we laten deze geheel weg en nemen alleen specifieke mee)
 
   ; WORKERS:
   ;     'collect food'                     : forever
-  ask workers
-    [set desire "collect food"]
 
   ; SCOUTS:
   ;     'find food & optimal hive location': forever
-  ask scouts
-    [set desire "find food & optimal hive location"]
 
   ; QUEEN(S):
-  ;     'manage colony'                    : else
-  ask queens
-    [set desire "manage colony"]
+  ;     'migrate'                          : if it beliefs hive is full
+  ;     'manage hive'                      : else
 
-end
 
 ; --- Update beliefs ---
 to update-beliefs
@@ -288,10 +284,13 @@ to update-beliefs
   ;
   ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
 
+<<<<<<< Updated upstream
   ask workers
     [set beliefs incoming_messages]  ; belief about location of food, received from scout
 
 
+=======
+>>>>>>> Stashed changes
   ; SCOUTS:
   ;     location of own hive
   ;     locations of new food source       : based on observation via its sensors (evt. niet altijd de juiste)
@@ -300,8 +299,12 @@ to update-beliefs
   ;     location of new site to migrate to : based on received message from queen
   ;     current energy level
 
+<<<<<<< Updated upstream
   ask scouts []
     ;[update-food-sources]
+=======
+; update food source list
+>>>>>>> Stashed changes
 
   ; QUEEN(S):
   ;     number of workers
@@ -426,6 +429,35 @@ to look-around
   ; spawn sensors in radius
   ; let sensors check
   ; let sensors die
+  let bee self
+  let col [color]  of self
+  ask patches in-radius scout_radius[
+    sprout-sensors 1[
+      create-link-with bee
+      set shape "dot"
+      set color col
+    ]
+  ]
+  ask my-links [set color col]
+end
+
+
+; scout calls this method
+to update-food-sources
+  ; add new element consisting of patch and max food value to list
+  let bee self
+  ask my-links [
+    let p patch-here
+    let food_val [max_food_value] of p
+    let food_source list (p) (food_val)
+    ifelse pcolor != white [
+    ; if patch is in known food sources, do not add to new food sources
+    if not member? food_source beliefs []
+    ][
+
+    ]
+
+  ]
 end
 
 to fly-to-hive
