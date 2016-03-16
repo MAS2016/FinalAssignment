@@ -614,7 +614,7 @@ end
 
 to send-scout-messages
   ask scouts [
-    if intention = "tell worker about location of food" [send-scout-message-to-workers
+    if intention = "tell worker about location of food" [send-scout-message-to-workers]
     if intention = "tell queen about location and quality of new site" [send-scout-message-to-queen]
   ]
 end
@@ -625,7 +625,7 @@ to send-scout-message-to-workers
     let msg outgoing_message_food
     let h my_home
     ; get number of bees waiting for a message
-    ask n-of (scout_message_effectiveness * count workers-with [my_home = h and intention = "wait for message"]) workers-with [my_home = h and intention = "wait for message"] [
+    ask n-of (scout_message_effectiveness * count workers with [my_home = h and intention = "wait for message"]) workers with [my_home = h and intention = "wait for message"] [
       set incoming_messages msg ; set the incoming message to the food source found by scout
     ]
   ]
@@ -633,8 +633,13 @@ end
 
 to send-scout-message-to-queen
   if not empty? outgoing_messages_sites [ ; if there is a message for the queen
-    let msg outgoing_messages_sites
-    ; ask queen at my_home
+    let h my_home
+    foreach outgoing_messages_sites[ ; for each message
+      let msg item ? outgoing_messages_sites
+      ask queens with [my_home = h] [
+        set incoming_messages lput msg incoming_messages
+      ]
+    ]
   ]
 end
 
