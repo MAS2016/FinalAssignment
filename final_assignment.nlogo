@@ -335,7 +335,7 @@ to update-intentions
   ;     look around
   ;     fly to hive       : if it believes there is food or a good new site
   ;     tell worker about location of food : if it believes there is food somewhere and it is at the hive
-  ;     tell queen about location & quality of new site : if it has belief about new site and is at hive
+  ;     tell queen about location and quality of new site : if it has belief about new site and is at hive
   ;     migrate           : if received message from queen
 
   ; QUEEN(S):
@@ -605,6 +605,9 @@ to send-messages
   send-queen-messages
 end
 
+to process-messages
+end
+
 to send-queen-messages
   if not empty? outgoing_messages [ ; if there is a message for the scouts and workers
     ; send it to n-of workers dependent on queen_message_effectiveness
@@ -613,18 +616,28 @@ to send-queen-messages
 end
 
 to send-scout-messages
-  send-scout-message-to-workers
-  send-scout-message-to-queen
+  ask scouts [if intention = "tell worker about location of food"
+    [send-scout-message-to-workers]
+  ]
+  ask scouts [if intention = "tell queen about location and quality of new site"
+    [send-scout-message-to-queen]
+  ]
 end
 
 to send-scout-message-to-workers
   if not empty? outgoing_message_food [ ; if there is a message for the workers
     ;send it to n-of workers dependent on scout_message_effectiveness
+    let msg outgoing_message_food
+    ask n-of (scout_message_effectiveness * count workers-here) workers-here [
+      set incoming_messages msg
+    ]
   ]
 end
 
 to send-scout-message-to-queen
   if not empty? outgoing_messages_sites [ ; if there is a message for the queen
+    let msg outgoing_messages_sites
+    ; ask queen at my_home
   ]
 end
 
