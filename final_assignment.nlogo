@@ -24,6 +24,7 @@ globals
 ;   (optional: enemy)
 breed [scouts scout]
 breed [workers worker]
+breed [queens queen]
 breed [hives hive]
 breed [sensors sensor]
 
@@ -186,9 +187,10 @@ to setup-queen
     set size 2
     set color red
     set my_home [patch-here] of hive 0
+    set beliefs []
+    set incoming_messages []
+    set outgoing_messages []
     set age 0
-
-    ; Values below are arbitrarily chosen for now
     set max_age random-normal 50 10
     set energy 100
     set max_energy random-normal 70 30
@@ -200,12 +202,11 @@ to setup-workers
     move-to [patch-here] of hive 0
     fd random-float 4
     set shape "bee"
-    set size 1.5
     set color black
     set my_home [patch-here] of hive 0
+    set beliefs []
+    set incoming_messages []
     set age 0
-
-    ; Values below are arbitrarily chosen for now
     set max_age random-normal 50 10
     set energy 100
     set max_energy random-normal 70 30
@@ -218,11 +219,13 @@ to setup-scouts
     move-to [patch-here] of hive 0
     fd random-float 4
     set shape "bee"
-    set color blue
+    set size 1.5
+    set color red
     set my_home [patch-here] of hive 0
+    set beliefs []
+    set incoming_messages []
+    set outgoing_messages []
     set age 0
-
-    ; Values below are arbitrarily chosen for now
     set max_age random-normal 50 10
     set energy 100
     set max_energy random-normal 70 30
@@ -273,6 +276,9 @@ to update-desires
 end
 
 ; --- Update beliefs ---
+to update-beliefs
+; to reduce computational load, beliefs about location of own hive, current amount of food carrying, energy level, age, and number of bees in hive are not explicitely implemented as beliefs
+
   ; WORKERS:
   ;     location of own hive (my_home)
   ;     probable location of 1 food source : based on received message from scout (incoming_messages)
@@ -283,7 +289,7 @@ end
   ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
 
   ask workers
-    [set beliefs incoming_messages beliefs]
+    [set beliefs incoming_messages]  ; belief about location of food, received from scout
 
 
   ; SCOUTS:
@@ -294,10 +300,8 @@ end
   ;     location of new site to migrate to : based on received message from queen
   ;     current energy level
 
-; update food source list
-to update_food_sources
-  ; voeg nieuw element bestaande uit ['patch', 'kleur'] aan lijst toe
-end
+  ask scouts []
+    ;[update-food-sources]
 
   ; QUEEN(S):
   ;     number of workers
@@ -307,11 +311,17 @@ end
   ;     location and quality of new sites  : based on received messages from scouts
   ;     current energy level
 
+  ask queens[
+    let blf_workers (count workers)
+  ]
+
+end
 
 ; --- Update intentions ---
 ; SHOULD BE DEPENDENT UPON BELIEFS & DESIRES
 ; 'Observe' should be split into 2 intentions: 'walk around' and 'look around'
 
+to update-intentions
   ; WORKERS:
   ;     wait for message  : if no belief about food location
   ;     fly to location   : if there is a belief about food location and it believes energy is sufficient
@@ -340,7 +350,7 @@ end
   ;     migrate to new site    : if belief own hive != current location
   ;     create new hive        : if current location = belief location of new (optimal) site
 
-
+  end
 ; --- Execute actions ---
 ; ACTIONS SHOULD IMMEDIATELY FOLLOW AN INTENTION
 ; opnieuw is het denk ik goed om 1 actie per tick te laten uitvoeren
@@ -1057,6 +1067,16 @@ Circle -16777216 true false 113 68 74
 Polygon -10899396 true false 189 233 219 188 249 173 279 188 234 218
 Polygon -10899396 true false 180 255 150 210 105 210 75 240 135 240
 
+hive
+false
+0
+Circle -7500403 true true 118 203 94
+Rectangle -6459832 true false 120 0 180 105
+Circle -7500403 true true 65 171 108
+Circle -7500403 true true 116 132 127
+Circle -7500403 true true 45 90 120
+Circle -7500403 true true 104 74 152
+
 house
 false
 0
@@ -1147,16 +1167,6 @@ Circle -16777216 true false 30 30 240
 Circle -7500403 true true 60 60 180
 Circle -16777216 true false 90 90 120
 Circle -7500403 true true 120 120 60
-
-tree
-false
-0
-Circle -7500403 true true 118 3 94
-Rectangle -6459832 true false 120 195 180 300
-Circle -7500403 true true 65 21 108
-Circle -7500403 true true 116 41 127
-Circle -7500403 true true 45 90 120
-Circle -7500403 true true 104 74 152
 
 triangle
 false
