@@ -647,32 +647,6 @@ end
 ; Queen message to workers & scouts
 ; new hive location
 ; if new hive location --> migrate (queen message effectiveness)
-
-; --- Send messages ---
-;to send-messages
-;  ; Here should put the code related to sending messages to other agents.
-;  ; Note that this could be seen as a special case of executing actions, but for conceptual clarity it has been put in a separate method.
-;  ask vacuums [
-;    if not empty? outgoing_messages
-;    [
-;      ; check welke ontvanger bericht moet krijgen
-;      ; stuur naar specifieke ontvanger
-;      foreach outgoing_messages [
-;        let msg ?
-;        if not member? msg sent_messages[
-;          set sent_messages lput msg sent_messages
-;          let col [color] of self
-;          ask vacuums with [color = item 1 msg]
-;          [ ;message color
-;            let in_msg list (item 0 msg) (col)
-;            set incoming_messages lput in_msg incoming_messages
-;          ]
-;          set outgoing_messages remove-item 0 outgoing_messages
-;        ]
-;      ]
-;     ]
-;    ]
-;end
 @#$#@#$#@
 GRAPHICS-WINDOW
 248
