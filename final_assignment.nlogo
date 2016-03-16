@@ -605,9 +605,6 @@ to send-messages
   send-queen-messages
 end
 
-to process-messages
-end
-
 to send-queen-messages
   if not empty? outgoing_messages [ ; if there is a message for the scouts and workers
     ; send it to n-of workers dependent on queen_message_effectiveness
@@ -616,11 +613,9 @@ to send-queen-messages
 end
 
 to send-scout-messages
-  ask scouts [if intention = "tell worker about location of food"
-    [send-scout-message-to-workers]
-  ]
-  ask scouts [if intention = "tell queen about location and quality of new site"
-    [send-scout-message-to-queen]
+  ask scouts [
+    if intention = "tell worker about location of food" [send-scout-message-to-workers
+    if intention = "tell queen about location and quality of new site" [send-scout-message-to-queen]
   ]
 end
 
@@ -628,8 +623,10 @@ to send-scout-message-to-workers
   if not empty? outgoing_message_food [ ; if there is a message for the workers
     ;send it to n-of workers dependent on scout_message_effectiveness
     let msg outgoing_message_food
-    ask n-of (scout_message_effectiveness * count workers-here) workers-here [
-      set incoming_messages msg
+    let h my_home
+    ; get number of bees waiting for a message
+    ask n-of (scout_message_effectiveness * count workers-with [my_home = h and intention = "wait for message"]) workers-with [my_home = h and intention = "wait for message"] [
+      set incoming_messages msg ; set the incoming message to the food source found by scout
     ]
   ]
 end
