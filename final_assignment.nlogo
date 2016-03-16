@@ -7,6 +7,8 @@
 ;   5) bee_capacity           : the total number of bees that a hive can hold
 ;   6) energy_loss_rate       : the speed at which bees lose energy (kan evt. ook lokaal)
 ;   7) carrying_capacity      : the maximum amount of food a worker bee can carry
+;   8) gain_from_food         : amount of energy that bees gain from eating 1 food
+;   9) color-list             : global list of colors to indicate food source quality (max_food_value)
 
 globals
   [color-list]
@@ -20,9 +22,8 @@ globals
 ;   5) Hives
 ;   6) Sensors (sensors that allow an agent to observe the environment)
 ;   (optional: enemy)
-breed [scouts scout]        ;I suggest we only use Bee in stead of Worker and Scout. Bee is always worker but can become (initial) scout
-breed [workers worker]      ;Tjeerd en ik denken dat het ook correct is om het zo op te delen, aangezien het een best duidelijk afgebakende 'rol' is. Het bereiken van een specifieke agenset zonder 'ifs' erin is ook een voordeel. De paar methods die overeenkomen nemen we dan voor lief.
-breed [queens queen]
+breed [scouts scout]
+breed [workers worker]
 breed [hives hive]
 breed [sensors sensor]
 
@@ -42,10 +43,11 @@ breed [sensors sensor]
 
 ; FOR FOOD SOURCE (patches):
 ;  11) food_value             : the amount of food that is stored in a source
+;  12) max_food_value         : maximum amount of food that can be stored in a source (i.e. its quality)
 
 ; FOR HIVES:
-;  12) total_food_in_hive     : the current amount of food that a hive holds
-;  13) total_bees_in_hive     : the current amount of bees that a hive holds
+;  13) total_food_in_hive     : the current amount of food that a hive holds
+;  14) total_bees_in_hive     : the current amount of bees that a hive holds
 
 ; ###################
 ; #   SCOUT AGENT   #
@@ -104,7 +106,7 @@ queens-own [
 
 hives-own[total_food_in_hive total_bees_in_hive]
 
-patches-own [food_value]
+patches-own [food_value max_food_value]
 ;--------------------------------------------------------------------------------------------------
 
 ; --- Setup ---
@@ -124,7 +126,9 @@ end
 to setup-food-sources
   ask patches [set pcolor white]
     ask n-of number_of_food_sources patches [  ; ask random patches to become food
-      set food_value random-normal 30 20       ; set food value according to a normal distribution
+      set max_food_value random-normal 30 20   ; set max food value according to a normal distribution
+      set-color                                ; set color according to max food value
+      set food_value max_food_value            ; set initial food value to maximum
       set-color                                ; set color according to food value
       set plabel food_value
       set plabel-color white
@@ -133,18 +137,18 @@ end
 
 to set-color
   set color-list [129 129 128.5 128 127.5 127 126.5 126 125 124 123 122]
-  ifelse food_value < 10 [set pcolor item 0 color-list][
-  ifelse food_value < 15 [set pcolor item 1 color-list][
-  ifelse food_value < 20 [set pcolor item 2 color-list][
-  ifelse food_value < 25 [set pcolor item 3 color-list][
-  ifelse food_value < 30 [set pcolor item 4 color-list][
-  ifelse food_value < 35 [set pcolor item 5 color-list][
-  ifelse food_value < 40 [set pcolor item 6 color-list][
-  ifelse food_value < 45 [set pcolor item 7 color-list][
-  ifelse food_value < 50 [set pcolor item 8 color-list][
-  ifelse food_value < 55 [set pcolor item 9 color-list][
-  ifelse food_value < 60 [set pcolor item 10 color-list][
-  if food_value >= 60 [set pcolor item 11 color-list]
+  ifelse max_food_value < 10 [set pcolor item 0 color-list][
+  ifelse max_food_value < 15 [set pcolor item 1 color-list][
+  ifelse max_food_value < 20 [set pcolor item 2 color-list][
+  ifelse max_food_value < 25 [set pcolor item 3 color-list][
+  ifelse max_food_value < 30 [set pcolor item 4 color-list][
+  ifelse max_food_value < 35 [set pcolor item 5 color-list][
+  ifelse max_food_value < 40 [set pcolor item 6 color-list][
+  ifelse max_food_value < 45 [set pcolor item 7 color-list][
+  ifelse max_food_value < 50 [set pcolor item 8 color-list][
+  ifelse max_food_value < 55 [set pcolor item 9 color-list][
+  ifelse max_food_value < 60 [set pcolor item 10 color-list][
+  if max_food_value >= 60 [set pcolor item 11 color-list]
   ]]]]]]]]]]]
 end
 
@@ -153,11 +157,11 @@ end
 to setup-hive
     create-hives 1 [
       setxy (random max-pxcor) (random min-pycor)
-      set shape "tree"
+      set shape "hive"
       set color yellow
       set size 3
       set total_food_in_hive 0
-      set label total_food_in_hive set label-color black
+      set label total_food_in_hive set label-color red
       set total_bees_in_hive initial_bees
     ]
 end
@@ -196,6 +200,7 @@ to setup-workers
     move-to [patch-here] of hive 0
     fd random-float 4
     set shape "bee"
+    set size 1.5
     set color black
     set my_home [patch-here] of hive 0
     set age 0
@@ -247,33 +252,39 @@ end
 
 ; --- Update desires ---
 
-;to update-desires
+to update-desires
   ; every agent: survive (of we laten deze geheel weg en nemen alleen specifieke mee)
 
   ; WORKERS:
   ;     'collect food'                     : forever
+  ask workers
+    [set desire "collect food"]
 
   ; SCOUTS:
   ;     'find food & optimal hive location': forever
+  ask scouts
+    [set desire "find food & optimal hive location"]
 
   ; QUEEN(S):
-  ;     'migrate'                          : if it beliefs hive is full
-  ;     'manage hive'                      : else
+  ;     'manage colony'                    : else
+  ask queens
+    [set desire "manage colony"]
 
+end
 
 ; --- Update beliefs ---
   ; WORKERS:
-  ;     location of own hive
+  ;     location of own hive (my_home)
   ;     probable location of 1 food source : based on received message from scout (incoming_messages)
-  ;                                        : realistisch zou zijn om niet altijd de precieze locatie te geven
-  ;                                          maar soms eentje 'in de buurt'. De worker vliegt daar dan heen en
-  ;                                          en moet zelf de precieze locatie vinden (bv. 2 patches verderop).
-  ;                                          Als we dit niet doen, heeft worker eigenlijk geen sensors nodig.
-  ;     location of new site to migrate to : based on received message from queen
+  ;     location of new site to migrate to : based on received message from queen (delete if at this location)
   ;     current amount of food carrying
   ;     current energy level
   ;
   ;     if food source reaches 0 and worker notices, worker deletes food source from belief base
+
+  ask workers
+    [set beliefs incoming_messages beliefs]
+
 
   ; SCOUTS:
   ;     location of own hive
@@ -589,7 +600,6 @@ end
 ;     ]
 ;    ]
 ;end
-
 @#$#@#$#@
 GRAPHICS-WINDOW
 248
