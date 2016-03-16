@@ -235,23 +235,16 @@ end
 
 ;-------------------------------------------------------------------------------------------------
 
-to go
-  ask scouts [move-around]
-  ask workers [move-around]
-  ask queens [move-around]
-  tick
-end
-
 ; --- Main processing cycle ---
-;to go
-;  update-desires
-;  update-beliefs
+to go
+  update-desires
+  update-beliefs
 ;  update-intentions
 ;  execute-actions
 ;  send-messages
 ;  increase-age
-;  tick
-;end
+  tick
+end
 
 ; --- Update desires ---
 
