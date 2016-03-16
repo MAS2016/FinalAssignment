@@ -67,7 +67,7 @@ scouts-own [
   incoming_messages
   outgoing_messages
   my_home
-  new_food_sources
+  observed_food_source
 ]
 
 ; ###################
@@ -450,11 +450,11 @@ to update-food-sources
     let p patch-here
     let food_val [max_food_value] of p
     let food_source list (p) (food_val)
-    ifelse pcolor != white [
-    ; if patch is in known food sources, do not add to new food sources
-    if not member? food_source beliefs []
-    ][
-
+    if food_val > 0 [ ; if there is food in observed the patch
+      set observed_food_source food_source
+      ifelse not member? food_source beliefs [ ; if patch is not in known food sources, add to new food sources and total belief base
+        set beliefs lput food_source beliefs
+      ]
     ]
 
   ]
