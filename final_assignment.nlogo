@@ -239,39 +239,39 @@ end
 
 ;-------------------------------------------------------------------------------------------------
 
-to go
-  ask scouts [move-around]
-  ask workers [move-around]
-  ask queens [move-around]
-  tick
-end
 
 ; --- Main processing cycle ---
-;to go
-;  update-desires
-;  update-beliefs
+to go
+  update-desires
+  update-beliefs
 ;  update-intentions
 ;  execute-actions
 ;  send-messages
 ;  increase-age
-;  tick
-;end
+  tick
+end
 
 ; --- Update desires ---
 
-;to update-desires
+to update-desires
   ; every agent: survive (of we laten deze geheel weg en nemen alleen specifieke mee)
 
   ; WORKERS:
   ;     'collect food'                     : forever
+  ask workers
+    [set desire "collect food"]
 
   ; SCOUTS:
   ;     'find food & optimal hive location': forever
+  ask scouts
+    [set desire "find food & optimal hive location"]
 
   ; QUEEN(S):
-  ;     'migrate'                          : if it beliefs hive is full
-  ;     'manage hive'                      : else
+  ;     'manage colony'                    : else
+  ask queens
+    [set desire "manage colony"]
 
+end
 
 ; --- Update beliefs ---
 to update-beliefs
@@ -300,7 +300,7 @@ to update-beliefs
 
   ask scouts []
     ;[update-food-sources]
-; update food source list
+
   ; QUEEN(S):
   ;     number of workers
   ;     number of scouts
@@ -309,11 +309,30 @@ to update-beliefs
   ;     location and quality of new sites  : based on received messages from scouts
   ;     current energy level
 
-  ask queens[
-    let blf_workers (count workers)
-  ]
+  ; belief too few workers
+  ; belief too few scouts
+  ; belief hive full
+  ; belief sites (= beliefs)
 
+  ask queens [
+
+    let queen_home my_home
+    let bees_in_hive [total_bees_in_hive] of hives-here ;
+    let current_sw_ratio count scouts with [my_home = queen_home] / count workers with [my_home = queen_home]
+
+    ifelse current_sw_ratio <= scout_worker_ratio
+      [set hive_beliefs "too few scouts"]
+      [set hive_beliefs "too few workers"]
+
+    if item 0 bees_in_hive >= item 0 [bee_capacity] of hives-here
+      [set hive_beliefs "hive is full"]
+
+    if not empty? incoming_messages
+      [ set beliefs fput incoming_messages beliefs
+        set beliefs remove-duplicates beliefs]
+  ]
 end
+
 
 ; --- Update intentions ---
 ; SHOULD BE DEPENDENT UPON BELIEFS & DESIRES
@@ -423,7 +442,7 @@ end
 to look-around
   ; spawn sensors in radius
   ; let sensors check
-  ; let sensors die
+
   let bee self
   let col [color]  of self
   ask patches in-radius scout_radius[
@@ -439,6 +458,7 @@ end
 
 ; scout calls this method
 ; add new element consisting of patch and max food value to list of food sources
+; let sensors die after observing
 to update-food-sources
   let bee self
   ask my-links [
@@ -454,6 +474,7 @@ to update-food-sources
       ]
     ]
   ]
+  ask my-links [die]
 end
 
 to fly-to-hive
@@ -512,7 +533,7 @@ end
 to collect-food
   set carrying carrying + 1
   ask patch-here [
-    set plabel plabel - 1
+    set food_value food_value -1
   ]
 end
 
