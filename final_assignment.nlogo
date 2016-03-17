@@ -57,6 +57,7 @@ breed [sensors sensor]
 ; ###################
 
 scouts-own [
+;
   beliefs
   desire
   intention
