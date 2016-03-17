@@ -59,6 +59,7 @@ breed [sensors sensor]
 scouts-own [
 ;
   beliefs
+  belief_moved
   desire
   intention
   age
@@ -78,6 +79,7 @@ scouts-own [
 
 workers-own [
   beliefs
+  belief_moved
   desire
   intention
   age
@@ -96,6 +98,7 @@ workers-own [
 
 queens-own [
   beliefs
+  belief_moved
   hive_beliefs
   desire
   intention
@@ -113,7 +116,11 @@ queens-own [
 ; #    HIVE AGENT   #
 ; ###################
 
-hives-own[total_food_in_hive total_bees_in_hive]
+hives-own[
+  total_food_in_hive
+  total_bees_in_hive
+
+  ]
 
 patches-own [food_value max_food_value]
 ;--------------------------------------------------------------------------------------------------
@@ -192,6 +199,7 @@ to setup-queen
     set max_energy random-normal 70 30
     set beliefs []
     set hive_beliefs []
+    set belief_moved false
     set incoming_messages_from_scout []
     set incoming_message_from_queen []
     set outgoing_messages []
@@ -210,6 +218,7 @@ to setup-workers
     set energy 100
     set max_energy random-normal 70 30
     set beliefs []
+    set belief_moved false
     set incoming_message_from_scout []
     set incoming_message_from_queen []
   ]
@@ -229,6 +238,7 @@ to setup-scouts
     set energy 100
     set max_energy random-normal 70 30
     set beliefs []
+    set belief_moved false
     set incoming_message_from_queen []
     set outgoing_message_food []
     set outgoing_messages_sites []
@@ -237,9 +247,11 @@ end
 
 
 ;-------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
+; --- Main processing cycle GO -------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
 
-
-; --- Main processing cycle ---
 to go
   update-desires
   update-beliefs
@@ -264,11 +276,15 @@ to update-desires
 
   ; QUEEN(S):
   ask queens
-    [set desire "manage colony"]
+    [set desire "maintain colony"]
 
 end
 
-; --- Update beliefs ---
+;-------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
+; --- ---------------------- Update beliefs ------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
 to update-beliefs
 ; beliefs about location of own hive, current amount of food carrying, energy level, age, and number of bees in hive are not explicitely implemented as beliefs
 
@@ -289,6 +305,7 @@ to update-beliefs
       [set beliefs lput incoming_message_from_queen beliefs]
   ]
 
+
   ; SCOUTS:
   ;     location of own hive
   ;     locations of new food source       : based on observation via its sensors (evt. niet altijd de juiste)
@@ -297,7 +314,16 @@ to update-beliefs
   ;     location of new site to migrate to : based on received message from queen
   ;     current energy level
 
-  ask scouts []
+  ask scouts [
+    if not empty? incoming_message_from_scout
+      [set beliefs incoming_message_from_scout]  ; belief about location of food, received from scout
+
+    if not empty? incoming_message_from_queen
+      [set beliefs lput incoming_message_from_queen beliefs]
+
+    if [food_value] of patch-here > 0 [set beliefs patch-here]              ; scout must remember belief of current location food source to communicate back at hive to some workers
+  ]
+
     ;[update-food-sources]
 
   ; QUEEN(S):
@@ -337,7 +363,12 @@ to update-beliefs
 end
 
 
-; --- Update intentions ---
+
+;-------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
+; --- ---------------------Update intentions -----------------------------------------------------
+;-------------------------------------------------------------------------------------------------
+;-------------------------------------------------------------------------------------------------
 ; SHOULD BE DEPENDENT UPON BELIEFS & DESIRES
 ; 'Observe' should be split into 2 intentions: 'walk around' and 'look around'
 
@@ -352,7 +383,6 @@ to update-intentions
   ;     drop food in hive : if it believes it carries food and is in hive
   ;     eat               : if belief energy level is below max_energy and bee is at own hive
   ;     migrate           : if received message from queen
-
   ask workers [
     if desire = "provide colony with food"
     [
@@ -377,7 +407,21 @@ to update-intentions
   ;     fly to hive       : if it believes there is food or a good new site
   ;     tell worker about location of food : if it believes there is food somewhere and it is at the hive
   ;     tell queen about location and quality of new site : if it has belief about new site and is at hive
+  ;     eat               : if belief energy level is below max_energy and bee is at own hive
   ;     migrate           : if received message from queen
+  ask scouts [
+    if desire = "find food & optimal hive location"
+    [
+      ifelse not belief_moved [set intention "move arround"][                                       ; if scout beliefs it has not moved then set intention to "move arround"
+      ifelse belief_moved [set intention "look arround"][                                           ; if scout has moved then set intention to "look arround" - at look arround "new hive site quality" is calculated based on the distance to food sources in its belief base
+      ifelse [food_value] of patch-here > 0 [set intention "fly to hive"][                          ; if scout arrived at a food source then set intention to "fly home" to communicate food source (and quality) to some workers
+      ifelse beliefs and patch-here = my_home [set intention "message workers"][                    ; if scout has a belief about a food location and is at home set intention to "message workers" its belief of a food location
+      ifelse empty? beliefs and patch-here = my_home [set intention "message queen"][               ; if scout has no belief about a food location and is at home then set intention to "message queen" about its current belief of best site (for a new hive)
+      ]]]]]]
+
+    if energy < max_energy and patch-here = my_home [set intention "eat"]                           ; if scout has less energy than max energy and is at hive, he intends to eat
+    if item 1 beliefs = incoming_message_from_queen [set intention "migrate"] ; if scout has belief about location of new hive (send by queen), then he intends to migrate
+    ]
 
   ; QUEEN(S):
   ;     produce new worker-bee : if belief number of scouts & workers is above scout_worker_ratio
@@ -387,7 +431,20 @@ to update-intentions
   ;     tell others to migrate
   ;     migrate to new site    : if belief own hive != current location
   ;     create new hive        : if current location = belief location of new (optimal) site
+  ask queens [
+    if desire = "maintain colony"
+    [
+      ifelse hive_beliefs = "too few workers" [set intention "produce new worker-bee"][
+      ifelse hive_beliefs = "too few scouts" [set intention "produce new scout-bee"][
+      ifelse hive_beliefs = "hive is full" [set intention "produce new queen"][        ; if queen beliefs its hive is full then produce new queen
+      ]]]]
 
+    if desire = "create new colony"
+    [
+      ifelse patch-here = beliefs [set intention "create new hive"][                   ; if current location = belief location of new (optimal) site then create new hive
+      ifelse not empty? beliefs [set intention "migrate"][                             ; if new queen (desire = create new colony) and it has a belief of a suitable new hive location then migrate (and also tell a part of the current colony to migrate)
+      ]]]
+  ]
 end
 
 
@@ -459,7 +516,8 @@ to execute-scout-actions
 end
 
 to move-around
-  rt (random 60 - random 60) fd random-float .1
+  rt (random 60 - random 60) fd random-float 1
+  set belief_moved true
 end
 
 to look-around
