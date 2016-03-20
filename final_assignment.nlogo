@@ -814,7 +814,7 @@ to evaluate-patch                                              ; bee = current s
   let Score 0
   ask hives [
     ask patches in-radius scout_radius [
-       if hives = patch-here [set Score -1]                     ; IF hive is within vision range of scout THEN set Score = -1
+       if hives-here [set Score -1]                     ; IF hive is within vision range of scout THEN set Score = -1
     ]
   ]
   if Score != -1 [
