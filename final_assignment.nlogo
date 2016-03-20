@@ -71,6 +71,8 @@ scouts-own [
   outgoing_messages_sites
   my_home
   observed_food_source
+  belief_new_hive_location                 ; current belief of best possible new hive location
+  belief_high_score                        ; current belief of score of best possible new hive location
 ]
 
 ; ###################
@@ -242,6 +244,8 @@ to setup-scouts
     set incoming_message_from_queen []
     set outgoing_message_food []
     set outgoing_messages_sites []
+    set belief_new_hive_location []
+    set belief_high_score 0
   ]
 end
 
@@ -523,10 +527,10 @@ end
 to look-around
   ; spawn sensors in radius
   ; let sensors check
-
-  let bee self
-  let col [color]  of self
+  let bee self                                     ; bee = current agent (= scout)
+  let col [color] of self
   ask patches in-radius scout_radius[
+    evaluate-patch                                     ; score patch for possible new hive location;
     sprout-sensors 1[
       create-link-with bee
       set shape "dot"
@@ -756,6 +760,36 @@ to send-scout-message-to-queen
       ]
     ]
   ]
+end
+
+
+; ################################################################################################
+; ########################## EVALUATION METHOD ###################################################
+; ################################################################################################
+; IF intention of scout
+; Score = 0
+; FOR each hive DO
+;   IF hive is within vision range of scout THEN set Score = -1
+; IF Score <> =-1 ; no hive within vision range
+; THEN FOR each known food source DO ; belief set of food sources of this scout
+; Score = Score + 1/(distance to food source)
+; IF Score > High-score THEN set New-hive-location to current location AND set High-score to Score
+; #################################################################################################
+
+to evaluate-patch                                              ; bee = current scout and patch = current patch in radius of bee
+  let Score 0
+  ask hives [
+    ask patches in-radius scout_radius [
+       if hives = patch-here [set Score -1]                     ; IF hive is within vision range of scout THEN set Score = -1
+    ]
+  ]
+  if Score != -1 [
+    foreach beliefs [set Score Score + 1 /(distance beliefs)]  ; for each belief (location food source) in belief base of scout: increase Score
+    ]
+  if Score > belief_high_score [                               ; IF Score > High-score THEN set New-hive-location to current location AND set High-score to Score
+    set belief_high_score Score
+    set belief_new_hive_location patch-here
+    ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
