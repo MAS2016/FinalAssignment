@@ -262,8 +262,8 @@ end
 to go
   update-desires
   update-beliefs
-;  update-intentions
-;  execute-actions
+  update-intentions
+  execute-actions
 ;  send-messages
 ;  increase-age
   tick
@@ -282,7 +282,7 @@ to update-desires
   ; SCOUTS:
   ask scouts
     [if empty? desire
-      [set desire "find food & optimal hive location"]
+      [set desire "find food and optimal hive location"]
     ]
 
   ; QUEEN(S):
@@ -416,7 +416,7 @@ to update-intentions
     if energy < max_energy and patch-here = belief_my_home  ; if worker has less energy than max energy and is at hive, he intends to eat
       [set intention "eat"]
 
-    if item 1 beliefs = incoming_message_from_queen  ; if worker has belief about location of new hive (send by queen), then he intends to migrate
+    if not empty? incoming_message_from_queen  ; if worker has belief about location of new hive (sent by queen), then he intends to migrate
       [set intention "migrate"]
   ]
 
@@ -429,9 +429,9 @@ to update-intentions
   ;     eat               : if belief energy level is below max_energy and bee is at own hive
   ;     migrate           : if received message from queen
   ask scouts [
-    if desire = "find food & optimal hive location"
+    if desire = "find food and optimal hive location"
     [
-      ifelse not belief_moved [set intention "move around"][                                       ; if scout beliefs it has not moved then set intention to "move arround"
+      ifelse not belief_moved [set intention "move around"][                                       ; if scout believes it has not moved then set intention to "move arround"
       ifelse belief_moved [set intention "look around"][                                           ; if scout has moved then set intention to "look arround" - at look arround "new hive site quality" is calculated based on the distance to food sources in its belief base
       ifelse [food_value] of patch-here > 0 [set intention "fly to hive"][                          ; if scout arrived at a food source then set intention to "fly home" to communicate food source (and quality) to some workers
       ifelse beliefs and patch-here = belief_my_home [set intention "message workers"][                    ; if scout has a belief about a food location and is at home set intention to "message workers" its belief of a food location
@@ -439,7 +439,7 @@ to update-intentions
       ]]]]]]
 
     if energy < max_energy and patch-here = belief_my_home [set intention "eat"]                           ; if scout has less energy than max energy and is at hive, he intends to eat
-    if item 1 beliefs = incoming_message_from_queen [set intention "migrate"] ; if scout has belief about location of new hive (send by queen), then he intends to migrate
+    if not empty? incoming_message_from_queen [set intention "migrate"] ; if scout has belief about location of new hive (send by queen), then he intends to migrate
     ]
 
   ; QUEEN(S):
@@ -475,8 +475,8 @@ end
 
 to execute-actions
   execute-scout-actions
-  execute-worker-actions
-  execute-queen-actions
+  ;execute-worker-actions
+  ;execute-queen-actions
 end
 
 ; ######################
@@ -523,7 +523,7 @@ end
 
 to execute-scout-actions
   ask scouts [
-    ifelse intention = "move around" [move-around][
+    ifelse intention = "move around" [move-around print "aye"][
     ifelse intention = "look around" [look-around][
     ifelse intention = "fly to hive" [fly-to-hive][
     ifelse intention = "tell worker about location of food" [tell-workers][
@@ -546,7 +546,7 @@ to look-around
   let bee self                                     ; bee = current agent (= scout)
   let col [color] of self
   ask patches in-radius scout_radius[
-    evaluate-patch                                     ; score patch for possible new hive location;
+    ask bee[evaluate-patch]                                     ; score patch for possible new hive location;
     sprout-sensors 1[
       create-link-with bee
       set shape "dot"
@@ -886,7 +886,7 @@ NIL
 1
 
 BUTTON
-21
+87
 547
 237
 580
@@ -1071,6 +1071,23 @@ bee_capacity
 1
 NIL
 HORIZONTAL
+
+BUTTON
+20
+547
+83
+580
+NIL
+GO\n
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
 
 @#$#@#$#@
 ## WHAT IS IT?
