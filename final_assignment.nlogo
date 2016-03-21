@@ -121,10 +121,10 @@ queens-own [
 hives-own[
   total_food_in_hive
   total_bees_in_hive
-
   ]
 
 patches-own [food_value max_food_value]
+
 ;--------------------------------------------------------------------------------------------------
 
 ; --- Setup ---
@@ -134,6 +134,7 @@ to setup
   setup-food-sources   ; determine food locations with quality
   setup-hive           ; create a hive at a random location
   setup-agents         ; create scouts, workers, and a queen
+  identify-bees-for-interface ; identify bees for interface
 
 end
 
@@ -176,7 +177,6 @@ to setup-hive
       set size 3
       set total_food_in_hive 0
       set label total_food_in_hive set label-color red
-      set total_bees_in_hive initial_bees
     ]
 end
 
@@ -202,6 +202,7 @@ to setup-queen
     set desire []
     set beliefs []
     set hive_beliefs []
+    set intention []
     set belief_moved false
     set incoming_messages_from_scout []
     set incoming_message_from_queen []
@@ -222,6 +223,7 @@ to setup-workers
     set max_energy random-normal 70 30
     set desire []
     set beliefs []
+    set intention []
     set belief_moved false
     set incoming_message_from_scout []
     set incoming_message_from_queen []
@@ -243,6 +245,8 @@ to setup-scouts
     set max_energy random-normal 70 30
     set desire []
     set beliefs []
+    set intention []
+    set observed_food_source []
     set belief_moved false
     set incoming_message_from_queen []
     set outgoing_message_food []
@@ -260,6 +264,8 @@ end
 ;-------------------------------------------------------------------------------------------------
 
 to go
+  identify-bees-for-interface
+  update-bees-in-hive
   update-desires
   update-beliefs
   update-intentions
@@ -267,6 +273,26 @@ to go
 ;  send-messages
 ;  increase-age
   tick
+end
+
+; --- Identify bees for interface ---
+to identify-bees-for-interface ; color worker and scout with lowest 'who' number respectively green and purple
+  ask min-one-of workers [who]
+    [set shape "green_bee"]
+  ask min-one-of scouts [who]
+    [set shape "purple_bee"]
+end
+
+
+; --- Update bees in hive ---
+to update-bees-in-hive
+  ask hives [
+    let hive_loc patch-here
+    let workers_in_hive count workers with [belief_my_home = hive_loc]
+    let scouts_in_hive count scouts with [belief_my_home = hive_loc]
+    let queen_in_hive count queens with [belief_my_home = hive_loc]
+    set total_bees_in_hive (workers_in_hive + scouts_in_hive + queen_in_hive) ; calculate total number of bees (workers+scouts+queens) in hive
+  ]
 end
 
 ; --- Update desires ---
@@ -355,17 +381,17 @@ to update-beliefs
   ask queens [
     if desire = "maintain colony" [
       let queen_home belief_my_home
-      let bees_in_hive [total_bees_in_hive] of hives-here
-      let current_sw_ratio count scouts with [belief_my_home = queen_home] / count workers with [belief_my_home = queen_home]
+      let bees_in_hive [total_bees_in_hive] of one-of hives-here  ; 'one-of' added so that it reports not an agentset (list), but only 1 agent
+      let bee_capacity_of_hive [bee_capacity] of one-of hives-here
+      let current_sw_ratio (count scouts with [belief_my_home = queen_home] / count workers with [belief_my_home = queen_home])
 
-      ifelse current_sw_ratio <= scout_worker_ratio ; if ratio between scouts and workers is lower than ratio as set by user
-        [set hive_beliefs "too few scouts"]         ; queen believes that there are too few scouts
-        [set hive_beliefs "too few workers"]        ; else, that there are too few workers
+      ifelse bees_in_hive >= bee_capacity_of_hive [set hive_beliefs "hive is full"][       ; if number of bees in hive reaches hive threshold, queen believes that hive is full
+      ifelse current_sw_ratio <= scout_worker_ratio [set hive_beliefs "too few scouts"][   ; else, if ratio between scouts and workers is lower than ratio as set by user, she believes that there are too few scouts
+          set hive_beliefs "too few workers"]                                              ; else, she believes that there are too few workers
+      ]
 
-      if item 0 bees_in_hive >= item 0 [bee_capacity] of hives-here   ; if number of bees in hive reaches hive threshold
-        [set hive_beliefs "hive is full"]           ; queen believes that hive is full
 
-      if not empty? incoming_messages_from_scout      ; if queen receives message from scout
+      if not empty? incoming_messages_from_scout                 ; if queen receives message from scout
         [ set beliefs fput incoming_messages_from_scout beliefs  ; put it in beliefbase
           set beliefs remove-duplicates beliefs]
 
@@ -374,7 +400,7 @@ to update-beliefs
     ]
 
     if desire = "create new colony" and not empty? incoming_message_from_queen   ; if desire is to create a new colony (the newly hatched queen has this desire) and has incoming message from (old) queen
-      [set belief_my_home incoming_message_from_queen]    ; location of new hive (as communicated by old queen) is added to belief base
+      [set belief_my_home incoming_message_from_queen]                           ; location of new hive (as communicated by old queen) is added to belief base
 
 
   ]
@@ -431,8 +457,8 @@ to update-intentions
   ask scouts [
     if desire = "find food and optimal hive location"
     [
-      ifelse not belief_moved [set intention "move around"][                                       ; if scout believes it has not moved then set intention to "move arround"
-      ifelse belief_moved [set intention "look around"][                                           ; if scout has moved then set intention to "look arround" - at look arround "new hive site quality" is calculated based on the distance to food sources in its belief base
+      ifelse not belief_moved [set intention "move around"][                                       ; if scout believes it has not moved then set intention to "move around"
+      ifelse belief_moved [set intention "look around"][                                           ; if scout has moved then set intention to "look around" - at look around "new hive site quality" is calculated based on the distance to food sources in its belief base
       ifelse [food_value] of patch-here > 0 [set intention "fly to hive"][                          ; if scout arrived at a food source then set intention to "fly home" to communicate food source (and quality) to some workers
       ifelse beliefs and patch-here = belief_my_home [set intention "message workers"][                    ; if scout has a belief about a food location and is at home set intention to "message workers" its belief of a food location
       ifelse empty? beliefs and patch-here = belief_my_home [set intention "message queen"][               ; if scout has no belief about a food location and is at home then set intention to "message queen" about its current belief of best site (for a new hive)
@@ -453,10 +479,10 @@ to update-intentions
   ask queens [
     if desire = "maintain colony"
     [
-      ifelse hive_beliefs = "too few workers" [set intention "produce new worker-bee"][
-      ifelse hive_beliefs = "too few scouts" [set intention "produce new scout-bee"][
-      ifelse hive_beliefs = "hive is full" and count other queens-here = 0 [set intention "produce new queen"][ ; if queen believes her hive is full and there is not yet a newly hatched queen, then her intention is to produce a new queen
+      ifelse hive_beliefs = "too few workers" [set intention "produce new worker"][
+      ifelse hive_beliefs = "too few scouts" [set intention "produce new scout"][
       ifelse empty? beliefs [set intention "wait for new possible hive location"][ ;if hive is full but there is no possible new location yet, wait
+      ifelse hive_beliefs = "hive is full" and count other queens-here = 0 [set intention "produce new queen"][ ; if queen believes her hive is full and there is not yet a newly hatched queen, then her intention is to produce a new queen
       set intention "tell others to migrate"  ; if there is a newly hatched queen (at location of old queen) and hive is full, then intention is to tell bees (incl. the hatched queen) to migrate
       ]]]]]
 
@@ -663,8 +689,8 @@ end
 
 to execute-queen-actions
   ask queens[
-    ifelse intention = "produce new worker bee"[produce-new-worker-bee][
-    ifelse intention = "produce new scout bee"[produce-new-scout-bee][
+    ifelse intention = "produce new worker"[produce-new-worker-bee][
+    ifelse intention = "produce new scout"[produce-new-scout-bee][
     ifelse intention = "produce new queen"[produce-new-queen][
     ifelse intention = "tell others to migrate"[tell-others-to-migrate][
     ifelse intention = "migrate"[migrate][
@@ -686,6 +712,7 @@ to produce-new-worker-bee
     set max_energy random-normal 70 30
     set desire []
     set beliefs []
+    set intention []
     set incoming_message_from_scout []
     set incoming_message_from_queen []
   ]
@@ -705,6 +732,8 @@ to produce-new-scout-bee
     set max_energy random-normal 70 30
     set desire []
     set beliefs []
+    set intention []
+    set observed_food_source []
     set incoming_message_from_queen []
     set outgoing_message_food []
     set outgoing_messages_sites []
@@ -723,6 +752,7 @@ to produce-new-queen
     set desire []
     set beliefs []
     set hive_beliefs []
+    set intention []
     set incoming_messages_from_scout []
     set incoming_message_from_queen []
     set outgoing_messages []
@@ -929,7 +959,7 @@ scout_worker_ratio
 scout_worker_ratio
 0.05
 2
-0.2
+1
 0.05
 1
 NIL
@@ -983,7 +1013,7 @@ HORIZONTAL
 PLOT
 22
 591
-222
+327
 741
 Number of bees
 Ticks
@@ -993,7 +1023,7 @@ Number
 0.0
 10.0
 true
-false
+true
 "" ""
 PENS
 "Queens" 1.0 0 -2674135 true "" "plot count queens"
@@ -1009,7 +1039,7 @@ initial_bees
 initial_bees
 0
 100
-100
+34
 1
 1
 NIL
@@ -1069,7 +1099,7 @@ bee_capacity
 bee_capacity
 0
 300
-50
+80
 10
 1
 NIL
@@ -1091,6 +1121,248 @@ NIL
 NIL
 NIL
 1
+
+MONITOR
+1063
+79
+1215
+124
+desire
+[desire] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1063
+125
+1565
+170
+beliefs
+[beliefs] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1350
+79
+1565
+124
+intention
+[intention] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1218
+79
+1347
+124
+hive_beliefs
+[hive_beliefs] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1063
+171
+1367
+216
+incoming messages
+[incoming_messages_from_scout] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1369
+171
+1565
+216
+outgoing messages
+[outgoing_messages] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1218
+33
+1347
+78
+total bees in her hive
+[total_bees_in_hive] of [one-of hives-here] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+1183
+310
+1301
+355
+beliefs
+[beliefs] of min-one-of workers [who]
+17
+1
+11
+
+MONITOR
+1304
+310
+1541
+355
+intention
+[intention] of min-one-of workers [who]
+17
+1
+11
+
+MONITOR
+1065
+310
+1179
+355
+home
+[belief_my_home] of min-one-of workers [who]
+17
+1
+11
+
+MONITOR
+1065
+358
+1302
+403
+incoming message from queen
+[incoming_message_from_queen] of min-one-of workers [who]
+17
+1
+11
+
+MONITOR
+1304
+358
+1542
+403
+incoming message from scout
+[incoming_message_from_scout] of min-one-of workers [who]
+17
+1
+11
+
+MONITOR
+994
+425
+1223
+470
+States of the SCOUT (purple) at patch:
+[patch-here] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+999
+33
+1215
+78
+States of QUEEN at patch:
+[belief_my_home] of min-one-of queens [who]
+17
+1
+11
+
+MONITOR
+997
+263
+1236
+308
+States of the WORKER (green) at patch:
+[patch-here] of min-one-of workers [who]
+17
+1
+11
+
+MONITOR
+1065
+472
+1181
+517
+home
+[belief_my_home] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+1185
+472
+1303
+517
+observed food source
+[observed_food_source] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+1306
+472
+1539
+517
+intention
+[intention] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+1065
+520
+1539
+565
+beliefs
+[beliefs] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+1296
+568
+1539
+613
+incoming message from queen
+[incoming_message_from_queen] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+1065
+568
+1293
+613
+outgoing message to workers
+[outgoing_message_food] of min-one-of scouts [who]
+17
+1
+11
+
+MONITOR
+1065
+615
+1538
+660
+outgoing messages to queen
+[outgoing_messages_sites] of min-one-of scouts [who]
+17
+1
+11
 
 @#$#@#$#@
 ## WHAT IS IT?
@@ -1317,6 +1589,31 @@ Circle -16777216 true false 113 68 74
 Polygon -10899396 true false 189 233 219 188 249 173 279 188 234 218
 Polygon -10899396 true false 180 255 150 210 105 210 75 240 135 240
 
+green_bee
+true
+0
+Polygon -13840069 true false 152 149 77 163 67 195 67 211 74 234 85 252 100 264 116 276 134 286 151 300 167 285 182 278 206 260 220 242 226 218 226 195 222 166
+Polygon -13840069 true false 150 149 128 151 114 151 98 145 80 122 80 103 81 83 95 67 117 58 141 54 151 53 177 55 195 66 207 82 211 94 211 116 204 139 189 149 171 152
+Polygon -13840069 true false 151 54 119 59 96 60 81 50 78 39 87 25 103 18 115 23 121 13 150 1 180 14 189 23 197 17 210 19 222 30 222 44 212 57 192 58
+Polygon -16777216 true false 70 185 74 171 223 172 224 186
+Polygon -16777216 true false 67 211 71 226 224 226 225 211 67 211
+Polygon -16777216 true false 91 257 106 269 195 269 211 255
+Line -1 false 144 100 70 87
+Line -1 false 70 87 45 87
+Line -1 false 45 86 26 97
+Line -1 false 26 96 22 115
+Line -1 false 22 115 25 130
+Line -1 false 26 131 37 141
+Line -1 false 37 141 55 144
+Line -1 false 55 143 143 101
+Line -1 false 141 100 227 138
+Line -1 false 227 138 241 137
+Line -1 false 241 137 249 129
+Line -1 false 249 129 254 110
+Line -1 false 253 108 248 97
+Line -1 false 249 95 235 82
+Line -1 false 235 82 144 100
+
 hive
 false
 0
@@ -1376,6 +1673,31 @@ Polygon -7500403 true true 165 180 165 210 225 180 255 120 210 135
 Polygon -7500403 true true 135 105 90 60 45 45 75 105 135 135
 Polygon -7500403 true true 165 105 165 135 225 105 255 45 210 60
 Polygon -7500403 true true 135 90 120 45 150 15 180 45 165 90
+
+purple_bee
+true
+0
+Polygon -8630108 true false 152 149 77 163 67 195 67 211 74 234 85 252 100 264 116 276 134 286 151 300 167 285 182 278 206 260 220 242 226 218 226 195 222 166
+Polygon -8630108 true false 150 149 128 151 114 151 98 145 80 122 80 103 81 83 95 67 117 58 141 54 151 53 177 55 195 66 207 82 211 94 211 116 204 139 189 149 171 152
+Polygon -8630108 true false 151 54 119 59 96 60 81 50 78 39 87 25 103 18 115 23 121 13 150 1 180 14 189 23 197 17 210 19 222 30 222 44 212 57 192 58
+Polygon -16777216 true false 70 185 74 171 223 172 224 186
+Polygon -16777216 true false 67 211 71 226 224 226 225 211 67 211
+Polygon -16777216 true false 91 257 106 269 195 269 211 255
+Line -1 false 144 100 70 87
+Line -1 false 70 87 45 87
+Line -1 false 45 86 26 97
+Line -1 false 26 96 22 115
+Line -1 false 22 115 25 130
+Line -1 false 26 131 37 141
+Line -1 false 37 141 55 144
+Line -1 false 55 143 143 101
+Line -1 false 141 100 227 138
+Line -1 false 227 138 241 137
+Line -1 false 241 137 249 129
+Line -1 false 249 129 254 110
+Line -1 false 253 108 248 97
+Line -1 false 249 95 235 82
+Line -1 false 235 82 144 100
 
 sheep
 false
