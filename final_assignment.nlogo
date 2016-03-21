@@ -363,7 +363,7 @@ to update-beliefs
     if not empty? incoming_message_from_queen             ; if scout receives message about location of new hive (from queen)
       [set belief_my_home incoming_message_from_queen]    ; add it to his belief base
 
-    if [food_value] of patch-here > 0 [set beliefs patch-here]  ; scout must remember belief of current location food source to communicate back at hive to some workers
+    ;if [food_value] of patch-here > 0 [set beliefs patch-here]  ; scout must remember belief of current location food source to communicate back at hive to some workers
   ]
 
     ;[update-food-sources]
@@ -593,6 +593,7 @@ to look-around
   ask sensors [
     if not show_sensors [set hidden? true]
   ]
+  update-food-sources
   set belief_moved false
 end
 
@@ -609,9 +610,14 @@ to update-food-sources
     if food_val > 0 [                             ; if there is food in observed the patch
       ask bee[
         set observed_food_source food_source      ; add to observed food source for telling worker
-        if not member? food_source beliefs [      ; if patch is not in known food sources...
-          set beliefs lput food_source beliefs    ; ...add to total belief base
-        ]
+        ifelse not empty? beliefs[
+          let is_in_beliefs false
+          foreach beliefs [                   ; loop through beliefs
+            if food_source = item 0 ? [set is_in_beliefs true]
+          ]
+          if is_in_beliefs = false [set beliefs lput food_source beliefs] ; ...add to total belief base
+          ]
+        [set beliefs lput food_source beliefs]
       ]
     ]
   ]
