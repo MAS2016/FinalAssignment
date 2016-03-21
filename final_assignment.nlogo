@@ -455,9 +455,10 @@ to update-intentions
     [
       ifelse hive_beliefs = "too few workers" [set intention "produce new worker-bee"][
       ifelse hive_beliefs = "too few scouts" [set intention "produce new scout-bee"][
-      ifelse hive_beliefs = "hive is full" and count other queens-here = 0 [set intention "produce new queen"][ ; if queen beliefs its hive is full and there is not yet a newly hatched queen, then her intention is to produce a new queen
+      ifelse hive_beliefs = "hive is full" and count other queens-here = 0 [set intention "produce new queen"][ ; if queen believes her hive is full and there is not yet a newly hatched queen, then her intention is to produce a new queen
+      ifelse empty? beliefs [set intention "wait for new possible hive location"][ ;if hive is full but there is no possible new location yet, wait
       set intention "tell others to migrate"  ; if there is a newly hatched queen (at location of old queen) and hive is full, then intention is to tell bees (incl. the hatched queen) to migrate
-      ]]]]
+      ]]]]]
 
     if desire = "create new colony"                                                    ; this is the desire of the newly hatched queen
     [
@@ -928,7 +929,7 @@ scout_worker_ratio
 scout_worker_ratio
 0.05
 2
-1
+0.2
 0.05
 1
 NIL
@@ -996,7 +997,7 @@ false
 "" ""
 PENS
 "Queens" 1.0 0 -2674135 true "" "plot count queens"
-"Workers" 1.0 0 -1184463 true "" "plot count workers"
+"Workers" 1.0 0 -13345367 true "" "plot count workers"
 "Scouts" 1.0 0 -7500403 true "" "plot count scouts"
 
 SLIDER
