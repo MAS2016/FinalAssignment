@@ -475,8 +475,8 @@ end
 
 to execute-actions
   execute-scout-actions
-  ;execute-worker-actions
-  ;execute-queen-actions
+  execute-worker-actions
+  execute-queen-actions
 end
 
 ; ######################
@@ -486,7 +486,6 @@ end
 ; 1) migrate
 ; 2) eat
 ; 3) use energy
-
 
 ; 1) migrate
 to migrate
@@ -506,6 +505,10 @@ end
 ; 3) use energy
 to use-energy
   set energy energy - energy_loss_rate
+end
+
+to move
+  forward 1
 end
 
 ; ######################
@@ -614,17 +617,14 @@ end
   ;     migrate           : if received message from queen
 
 to execute-worker-actions
-  ifelse intention = "wait for message" [wait-for-message][
-  ifelse intention = "collect food" [collect-food][
-  ifelse intention = "drop food in hive" [drop-food-in-hive][
-  ifelse intention = "" [][
-  ifelse intention = "" [][
-  ]]]]]
-end
-
-to move
-  set heading first beliefs
-  forward 1
+  ask workers[
+    ifelse intention = "wait for message" [wait-for-message][
+    ifelse intention = "collect food" [collect-food][
+    ifelse intention = "drop food in hive" [drop-food-in-hive][
+    ifelse intention = "move to food location" [set heading first beliefs move][
+    ifelse intention = "" [][
+    ]]]]]
+  ]
 end
 
 to wait-for-message
@@ -661,13 +661,15 @@ end
   ;     eat                    --> energy + 1 & total_food_in_hive - 1
 
 to execute-queen-actions
-  ifelse intention = "produce new worker bee"[produce-new-worker-bee][
-  ifelse intention = "produce new scout bee"[produce-new-scout-bee][
-  ifelse intention = "produce new queen"[produce-new-queen][
-  ifelse intention = "tell others to migrate"[tell-others-to-migrate][
-  ifelse intention = "migrate"[migrate][
-  ifelse intention = "create new hive"[create-new-hive][
-  ]]]]]]
+  ask queens[
+    ifelse intention = "produce new worker bee"[produce-new-worker-bee][
+    ifelse intention = "produce new scout bee"[produce-new-scout-bee][
+    ifelse intention = "produce new queen"[produce-new-queen][
+    ifelse intention = "tell others to migrate"[tell-others-to-migrate][
+    ifelse intention = "migrate"[migrate][
+    ifelse intention = "create new hive"[create-new-hive][
+    ]]]]]]
+  ]
 end
 
 to produce-new-worker-bee
