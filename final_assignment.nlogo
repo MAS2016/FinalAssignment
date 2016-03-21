@@ -594,6 +594,7 @@ to look-around
   ask sensors [
     if not show_sensors [set hidden? true]
   ]
+  set belief_moved false
 end
 
 
@@ -713,7 +714,6 @@ to produce-new-worker-bee
   let parent_home belief_my_home
   hatch-workers 1 [
     set belief_my_home parent_home
-    fd random-float 4
     set shape "bee"
     set color black
     set age 0
@@ -732,7 +732,6 @@ to produce-new-scout-bee
   let parent_home belief_my_home
   hatch-scouts 1 [
     set belief_my_home parent_home
-    fd random-float 4
     set shape "bee"
     set size 1.5
     set color red
@@ -1048,8 +1047,8 @@ SLIDER
 initial_bees
 initial_bees
 0
-100
-2
+20
+6
 1
 1
 NIL
@@ -1108,9 +1107,9 @@ SLIDER
 bee_capacity
 bee_capacity
 0
-300
-0
+50
 10
+1
 1
 NIL
 HORIZONTAL
