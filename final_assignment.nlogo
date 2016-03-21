@@ -11,7 +11,8 @@
 ;   9) color-list             : global list of colors to indicate food source quality (max_food_value)
 
 globals
-  [color-list]
+  [ color-list
+    hide_sensors ]
 
 ; --- Agents ---
 ; The following types of agents exist:
@@ -135,7 +136,6 @@ to setup
   setup-hive           ; create a hive at a random location
   setup-agents         ; create scouts, workers, and a queen
   identify-bees-for-interface ; identify bees for interface
-
 end
 
 ; --- Setup food-sources ---
@@ -171,7 +171,7 @@ end
 ; --- Setup hive ---
 to setup-hive
     create-hives 1 [
-      setxy (random max-pxcor) (random min-pycor)
+      setxy (random-xcor) (random-ycor)
       set shape "hive"
       set color yellow
       set size 3
@@ -277,10 +277,14 @@ end
 
 ; --- Identify bees for interface ---
 to identify-bees-for-interface ; color worker and scout with lowest 'who' number respectively green and purple
-  ask min-one-of workers [who]
-    [set shape "green_bee"]
-  ask min-one-of scouts [who]
-    [set shape "purple_bee"]
+  ask min-one-of workers [who] [
+      set shape "green_bee"
+      set color green
+  ]
+  ask min-one-of scouts [who] [
+      set shape "purple_bee"
+      set color violet
+  ]
 end
 
 
@@ -576,14 +580,20 @@ to look-around
   let bee self                                     ; bee = current agent (= scout)
   let col [color] of self
   ask patches in-radius scout_radius[
-    ask bee[evaluate-patch]                                     ; score patch for possible new hive location;
+    ask bee[evaluate-patch]                        ; score patch for possible new hive location;
     sprout-sensors 1[
       create-link-with bee
       set shape "dot"
       set color col
     ]
   ]
-  ask my-links [set color col]
+  ask my-links [
+    set color col
+    if not show_sensors [set hidden? true]
+  ]
+  ask sensors [
+    if not show_sensors [set hidden? true]
+  ]
 end
 
 
@@ -1039,7 +1049,7 @@ initial_bees
 initial_bees
 0
 100
-34
+2
 1
 1
 NIL
@@ -1099,7 +1109,7 @@ bee_capacity
 bee_capacity
 0
 300
-80
+0
 10
 1
 NIL
@@ -1363,6 +1373,17 @@ outgoing messages to queen
 17
 1
 11
+
+SWITCH
+335
+591
+469
+624
+show_sensors
+show_sensors
+1
+1
+-1000
 
 @#$#@#$#@
 ## WHAT IS IT?
