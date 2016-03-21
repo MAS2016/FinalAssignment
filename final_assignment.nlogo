@@ -11,8 +11,7 @@
 ;   9) color-list             : global list of colors to indicate food source quality (max_food_value)
 
 globals
-  [ color-list
-    hide_sensors ]
+  [ color-list ]
 
 ; --- Agents ---
 ; The following types of agents exist:
@@ -600,10 +599,10 @@ end
 
 ; scout calls this method
 ; add new element consisting of patch and max food value to list of food sources
-; let sensors die after observing
+; let sensors die AFTER OBSERVING
 to update-food-sources
   let bee self
-  ask my-links [
+  ask link-neighbors [
     let p patch-here
     let food_val [max_food_value] of p
     let food_source list (p) (food_val)
@@ -616,7 +615,7 @@ to update-food-sources
       ]
     ]
   ]
-  ask my-links [die]
+  ask link-neighbors [die]
 end
 
 to fly-to-hive
@@ -1380,7 +1379,7 @@ SWITCH
 624
 show_sensors
 show_sensors
-1
+0
 1
 -1000
 
