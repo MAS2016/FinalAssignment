@@ -498,7 +498,7 @@ end
 ; decrease food in hive
 to eat
   set energy energy + gain_from_food
-  ask belief_my_home[
+  ask hives-at [pxcor] of belief_my_home [pycor] of belief_my_home[
     set total_food_in_hive total_food_in_hive - 1
   ]
 end
@@ -523,7 +523,7 @@ end
 
 to execute-scout-actions
   ask scouts [
-    ifelse intention = "move around" [move-around print "aye"][
+    ifelse intention = "move around" [move-around][
     ifelse intention = "look around" [look-around][
     ifelse intention = "fly to hive" [fly-to-hive][
     ifelse intention = "tell worker about location of food" [tell-workers][
@@ -814,7 +814,7 @@ to evaluate-patch                                              ; bee = current s
   let Score 0
   ask hives [
     ask patches in-radius scout_radius [
-       if hives-here [set Score -1]                     ; IF hive is within vision range of scout THEN set Score = -1
+       if any? hives-here [set Score -1]                     ; IF hive is within vision range of scout THEN set Score = -1
     ]
   ]
   if Score != -1 [
