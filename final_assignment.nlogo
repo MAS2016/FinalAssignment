@@ -115,6 +115,7 @@ queens-own [
   belief_my_home
   high_score
   highest_scoring_patch
+  hive_created
 ]
 
 ; ###################
@@ -209,6 +210,7 @@ to setup-queen
     set incoming_messages_from_scout []
     set incoming_message_from_queen []
     set outgoing_messages []
+    set hive_created true
   ]
 end
 
@@ -323,10 +325,8 @@ to update-desires
     [if empty? desire                      ; if queen has no desire (this is included, because a newly hatched queen is given the desire to create a new colony (see produce-new-queen method))
        [set desire "maintain colony"]      ; set desire to maintain her colony
 
-     if desire = "create new colony" and patch-here = belief_my_home and not empty? incoming_message_from_queen and count hives-here = 1  ; if newly hatched queen has reached the site, and she created a hive, then set desire to maintain her colony
-       [
-       print incoming_message_from_queen
-       set desire "maintain colony"]
+     if desire = "create new colony" and patch-here = belief_my_home and hive_created = true  ; if newly hatched queen has reached the site, and she created a hive, then set desire to maintain her colony
+       [set desire "maintain colony"]
     ]
 
 end
@@ -422,10 +422,9 @@ to update-beliefs
           ]
     ]
 
-    if desire = "create new colony" ;and not empty? incoming_message_from_queen   ; if desire is to create a new colony (the newly hatched queen has this desire) and has incoming message from (old) queen
+    if desire = "create new colony" and not empty? incoming_message_from_queen   ; if desire is to create a new colony (the newly hatched queen has this desire) and has incoming message from (old) queen
       [
         set belief_my_home item 0 incoming_message_from_queen                          ; location of new hive (as communicated by old queen) is added to belief base
-        print "word ik wel uitgevoerd?"
         set incoming_message_from_queen []
       ]
 
@@ -516,7 +515,7 @@ to update-intentions
     if desire = "create new colony"                                                    ; this is the desire of the newly hatched queen
     [
       ifelse patch-here = belief_my_home [set intention "create new hive"][                   ; if current location = belief location of new (optimal) site then create new hive
-      ifelse not empty? belief_my_home [set intention "migrate"][                             ; if new queen (desire = create new colony) and it has a belief of a suitable new hive location then migrate (and also tell a part of the current colony to migrate)
+      ifelse is-patch? belief_my_home [set intention "migrate"][                             ; if new queen (desire = create new colony) and it has a belief of a suitable new hive location then migrate (and also tell a part of the current colony to migrate)
       ]]]
   ]
 
@@ -544,7 +543,7 @@ end
 ; 1) migrate
 to migrate
 ;  set heading to belief_my_home and move
-  face item 0 belief_my_home
+  face belief_my_home
   forward 0.5
 end
 
@@ -615,10 +614,6 @@ to look-around
   ]
   ask my-links [
     set color col
-    if not show_sensors [set hidden? true]
-  ]
-  ask sensors [
-    if not show_sensors [set hidden? true]
   ]
   update-food-sources
   set belief_moved false
@@ -795,6 +790,8 @@ to produce-new-queen
     set incoming_message_from_queen []
     set outgoing_messages []
     set desire "create new colony"
+    set belief_my_home 0
+    set hive_created false
   ]
 end
 
@@ -803,13 +800,16 @@ to tell-others-to-migrate
 end
 
 to create-new-hive
-  hatch-hives 1 [
-    set shape "hive"
-    set color yellow
-    set size 3
-    set total_food_in_hive 0
-    set label total_food_in_hive set label-color red
+  if hive_created = false[
+    hatch-hives 1 [
+      set shape "hive"
+      set color yellow
+      set size 3
+      set total_food_in_hive 0
+      set label total_food_in_hive set label-color red
+    ]
   ]
+  set hive_created true
 end
 
 ; --- Send messages ---
@@ -1156,7 +1156,7 @@ bee_capacity
 bee_capacity
 0
 50
-10
+35
 1
 1
 NIL
@@ -1420,17 +1420,6 @@ outgoing messages to queen
 17
 1
 11
-
-SWITCH
-335
-591
-469
-624
-show_sensors
-show_sensors
-1
-1
--1000
 
 MONITOR
 1065
